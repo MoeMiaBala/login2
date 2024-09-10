@@ -1,0 +1,1 @@
+export const BG_Color="#FFFFFF"
