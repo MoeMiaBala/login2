@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
   btn:{
     width: '90%',
     height: verticalScale(40),
-    borderRadius: moderateScale(20),
+    borderRadius: moderateScale(5),
     backgroundColor:'white',
     borderColor: 'black',
     borderWidth:1,

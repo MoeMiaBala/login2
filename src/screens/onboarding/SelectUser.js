@@ -12,18 +12,18 @@ const SelectUser = () => {
         source={require('../../images/logo.png')} 
         style={styles.logo}
         />
-      <Text style={styles.title}>What are you looking for? </Text>
+      <Text style={styles.title}>Looking forward to: </Text>
       <TouchableOpacity style={styles.hire}
       onPress={() =>{
         navigation.navigate('JobPostingNav')
       }}
       >
-        <Text style={styles.btnTxt1}> Hire a candidate</Text>
+        <Text style={styles.btnTxt1}> Hiring candidate  </Text>
 
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.post}>
-        <Text style={styles.btnTxt2}> Looking for a job</Text>
+        <Text style={styles.btnTxt2}>     Finding a job   </Text>
 
       </TouchableOpacity>
     </View>
@@ -75,6 +75,7 @@ const styles = StyleSheet.create({
         width: moderateScale(250),
         height: moderateScale(250),
         resizeMode: 'contain',
-        marginBottom: moderateVerticalScale(20)
+        marginBottom: moderateVerticalScale(20),
+        borderRadius: 9,
     }
 })
