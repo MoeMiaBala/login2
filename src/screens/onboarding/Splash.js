@@ -9,7 +9,7 @@ const Splash = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.navigate('SelectUser');
+      navigation.navigate('JobPostingNav');
     }, 3000);
     return () => clearTimeout(timer);
   }, [navigation]);
