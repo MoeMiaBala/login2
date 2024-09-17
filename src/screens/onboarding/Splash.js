@@ -1,55 +1,57 @@
-import { View, Text ,StyleSheet, Image} from 'react-native';
-import React from 'react';
-import { BG_Color } from '../../utils/Color';
-import {moderateScale, moderateVerticalScale, scale, verticalScale} from 'react-native-size-matters';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import React, { useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { useEffect } from 'react';
+import { BG_Color, Primary_Color, Secondary_Color } from '../../utils/Color';
+import { moderateScale, moderateVerticalScale, scale, verticalScale } from 'react-native-size-matters';
 
 const Splash = () => {
-  const navigation=useNavigation();
+  const navigation = useNavigation();
+
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       navigation.navigate('SelectUser');
     }, 3000);
-  }, []);
+    return () => clearTimeout(timer);
+  }, [navigation]);
+
   return (
     <View style={styles.container}>
-      {/* find logo and resize scale*/}
       <Image source={require("../../images/logo.png")} style={styles.logo} />
       <Text style={styles.name}>HireHorizon</Text>
-
-      {/* add slogan*/}
       <Text style={styles.slogan}>Connecting You to Flexible Work, One Job at a Time.</Text>
     </View>
-  )
+  );
 }
 
-export default Splash
+export default Splash;
 
-const styles= StyleSheet.create({
-  container:{
+const styles = StyleSheet.create({
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: BG_Color
+    backgroundColor: BG_Color,
+    padding: moderateScale(20),
   },
-  logo:{
-    width:scale(100),
-    height:verticalScale(100)
+  logo: {
+    width: scale(150),
+    height: verticalScale(150),
+    resizeMode: 'contain',
+    marginBottom: moderateVerticalScale(20),
+    borderRadius: 9,
   },
-  name:{
-    fontSize: moderateScale(35),
-    fontWeight: '600',
-    marginTop: moderateVerticalScale(10),
-    color: 'black'
+  name: {
+    fontSize: moderateScale(40),
+    fontWeight: '700',
+    color: Primary_Color,
+    marginVertical: moderateVerticalScale(10),
   },
-  slogan:{
-    fontSize: moderateScale(16),
-    fontWeight: '600',
+  slogan: {
+    fontSize: moderateScale(18),
+    fontWeight: '400',
     fontStyle: 'italic',
-    position:'absolute',
-    bottom: moderateVerticalScale(80),
-    textDecorationLine:'underline',
-    color: 'black'
-  }
-})
+    textAlign: 'center',
+    color: Secondary_Color,
+    marginTop: moderateVerticalScale(20),
+  },
+});
