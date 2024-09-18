@@ -7,6 +7,9 @@ import JobPostingNav from './JobPostingNav';
 import JobSearching from './JobSearchingNav';
 import Profile from '../screens/profile';
 import SelectUser from '../screens/onboarding/SelectUser';
+import SettingsScreen from '../screens/settings';
+import JobPostsScreen from '../screens/jobs';
+import EmployerDashboard from '../screens/employerD';
 
 const Stack = createStackNavigator();
 
@@ -33,6 +36,18 @@ const MainNavigator = () => {
 
             <Stack.Screen name='Profile'
             component={Profile}
+            options={{headerShown:false}}/>
+
+            <Stack.Screen name='Settings'
+            component={SettingsScreen}
+            options={{headerShown:false}}/>
+
+            <Stack.Screen name='Posts'
+            component={JobPostsScreen}
+            options={{headerShown:false}}/>
+
+            <Stack.Screen name='EmployerDashboard'
+            component={EmployerDashboard}
             options={{headerShown:false}}/>
 
         </Stack.Navigator>

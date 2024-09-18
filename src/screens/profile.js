@@ -1,229 +1,253 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Alert,
-} from "react-native";
-import RNPickerSelect from 'react-native-picker-select';
-import { launchImageLibrary } from 'react-native-image-picker';
-import CustomTextInput from "../components/CustomTextInput";
-import CustomSolidBtn from "../components/CustomSolidBtn";
-import CustomBorderBtn from "../components/CustomBorderBtn";
-import { useNavigation } from "@react-navigation/native";
-import { moderateScale, moderateVerticalScale, scale } from "react-native-size-matters";
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur'; // For the blur effect
+import { Easing } from 'react-native';
 
-const Profile = () => {
-  const navigation = useNavigation();
-  const [form, setForm] = useState({
-    age: '',
-    idNumber: '',
-    role: '',
-    profilePhoto: null,
-  });
+const ProfileScreen = ({ navigation }) => {
+  const [isSidebarVisible, setSidebarVisible] = useState(false);
+  const slideAnim = useState(new Animated.Value(-250))[0]; // Sidebar sliding animation
 
-  const [errors, setErrors] = useState({
-    age: '',
-    idNumber: '',
-    role: '',
-  });
-
-  const validate = () => {
-    let valid = true;
-    const newErrors = { age: '', idNumber: '', role: '' };
-
-    if (form.age === '') {
-      newErrors.age = 'Please enter your age';
-      valid = false;
-    }
-
-    if (form.idNumber === '') {
-      newErrors.idNumber = 'Please enter your ID number';
-      valid = false;
-    }
-
-    if (form.role === '') {
-      newErrors.role = 'Please select your role';
-      valid = false;
-    }
-
-    setErrors(newErrors);
-    return valid;
+  const userInfo = {
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    profileImage: 'https://example.com/profile.jpg',
   };
 
-  const handleChange = (field, value) => {
-    setForm({
-      ...form,
-      [field]: value,
-    });
+  const tags = ['hello','there'];
+
+  const jobStatus = [
+    { jobTitle: 'Frontend Developer', status: 'Applied' },
+    { jobTitle: 'UI Designer', status: 'In Review' },
+    { jobTitle: 'Backend Developer', status: 'Interview Scheduled' },
+  ];
+
+  // Function to toggle sidebar visibility
+  const toggleSidebar = () => {
+    Animated.timing(slideAnim, {
+      toValue: isSidebarVisible ? -250 : 0, // Sidebar width
+      duration: 300,
+      useNativeDriver: true,
+      easing: Easing.ease,
+    }).start();
+    setSidebarVisible(!isSidebarVisible);
   };
 
-  const handlePhotoUpload = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.5 }, response => {
-      if (response.didCancel) {
-        console.log('User canceled image picker');
-      } else if (response.errorCode) {
-        console.error(response.errorMessage);
-      } else {
-        setForm({
-          ...form,
-          profilePhoto: response.assets[0].uri,
-        });
-      }
-    });
+  // Color coding job status
+  const getJobStatusStyle = (status) => {
+    switch (status) {
+      case 'Applied':
+        return { backgroundColor: '#e0f7fa', color: '#00796b' };
+      case 'In Review':
+        return { backgroundColor: '#fff8e1', color: '#ffb300' };
+      case 'Interview Scheduled':
+        return { backgroundColor: '#e8f5e9', color: '#388e3c' };
+      default:
+        return { backgroundColor: '#f4f4f4', color: 'gray' };
+    }
+  };
+
+  // Render each tag or a prompt to add tags
+  const renderTag = (tag) => (
+    <View style={styles.tagContainer}>
+      <Text style={styles.tagText}>{tag}</Text>
+    </View>
+  );
+
+  const renderJobStatus = ({ item }) => {
+    const jobStyle = getJobStatusStyle(item.status);
+    return (
+      <View style={[styles.jobStatusContainer, { backgroundColor: jobStyle.backgroundColor }]}>
+        <Text style={[styles.jobTitle, { color: jobStyle.color }]}>{item.jobTitle}</Text>
+        <Text style={[styles.jobStatus, { color: jobStyle.color }]}>{item.status}</Text>
+      </View>
+    );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.title}>Complete Your Profile</Text>
+      {/* Blur the screen when sidebar is visible */}
+      {isSidebarVisible && <BlurView intensity={50} style={styles.absoluteBlur} />}
 
-        <TouchableOpacity onPress={handlePhotoUpload} style={styles.photoContainer}>
-          {form.profilePhoto ? (
-            <Image source={{ uri: form.profilePhoto }} style={styles.profilePhoto} />
-          ) : (
-            <Text style={styles.photoPlaceholder}>Add Profile Photo</Text>
-          )}
+      {/* Sidebar */}
+      <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
+        <TouchableOpacity onPress={toggleSidebar} style={styles.closeSidebar}>
+          <Ionicons name="close" size={24} color="white" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.sidebarItem}>
+          <Ionicons name="home-outline" size={24} color="white" />
+          <Text style={styles.sidebarText}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.sidebarItem}>
+          <Ionicons name="chatbubble-outline" size={24} color="white" />
+          <Text style={styles.sidebarText}>Chats</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.sidebarItem}>
+          <Ionicons name="log-out-outline" size={24} color="white" />
+          <Text style={styles.sidebarText}>Logout</Text>
+        </TouchableOpacity>
+      </Animated.View>
 
-        <CustomTextInput
-          value={form.age}
-          onChangeText={txt => handleChange('age', txt)}
-          title={"Age"}
-          placeholder={"30"}
-          keyboardType={"number-pad"}
-          bad={errors.age !== ''}
-        />
-        {errors.age !== '' && <Text style={styles.errorMsg}>{errors.age}</Text>}
+      {/* Top Icons */}
+      <View style={styles.topIcons}>
+        <TouchableOpacity>
+          <Ionicons name="menu-outline" size={24} color="black" onPress={toggleSidebar} />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="settings-outline" size={24} color="black" onPress={() => {navigation.navigate('Settings')}}/>
+        </TouchableOpacity>
+      </View>
 
-        <CustomTextInput
-          value={form.idNumber}
-          onChangeText={txt => handleChange('idNumber', txt)}
-          title={"ID Number"}
-          placeholder={"1234567890"}
-          keyboardType={"number-pad"}
-          bad={errors.idNumber !== ''}
-        />
-        {errors.idNumber !== '' && <Text style={styles.errorMsg}>{errors.idNumber}</Text>}
-
-        <View style={styles.pickerContainer}>
-          <Text style={styles.label}>Role</Text>
-          <RNPickerSelect
-            onValueChange={(value) => handleChange('role', value)}
-            items={[
-              { label: 'Select Role', value: '' },
-              { label: 'Employer', value: 'employer' },
-              { label: 'Employee', value: 'employee' },
-            ]}
-            style={pickerStyles}
-          />
-          {errors.role !== '' && <Text style={styles.errorMsg}>{errors.role}</Text>}
+      {/* Profile Section */}
+      <View style={styles.profileSection}>
+        <Image source={{ uri: userInfo.profileImage }} style={styles.profileImage} />
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{userInfo.name}</Text>
+          <Text style={styles.userEmail}>{userInfo.email}</Text>
         </View>
+        <TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen')}>
+          <Ionicons name="create-outline" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.buttonContainer}>
-          <CustomSolidBtn
-            title={"Save"}
-            onClick={() => {
-              if (validate()) {
-                console.log("Profile validated successfully");
-                // Proceed with profile update logic
-              }
-            }}
+      {/* Tags Section */}
+      <View style={styles.tagsSection}>
+        <Text style={styles.sectionTitle}>Your Interests:</Text>
+        {tags.length === 0 ? (
+          <View style={styles.noTags}>
+            <Text style={styles.noTagsText}>No interests yet. Add one!</Text>
+            <TouchableOpacity>
+              <Ionicons name="add-circle-outline" size={30} color="black" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={tags}
+            horizontal
+            renderItem={({ item }) => renderTag(item)}
+            keyExtractor={(item) => item}
+            showsHorizontalScrollIndicator={false}
           />
-          <CustomBorderBtn
-            title={"Cancel"}
-            onClick={() => {
-              navigation.goBack();
-            }}
-          />
-        </View>
-      </ScrollView>
+        )}
+      </View>
+
+      {/* Job Status Section */}
+      <View style={styles.jobStatusSection}>
+        <Text style={styles.sectionTitle}>Job Application Status:</Text>
+        <FlatList
+          data={jobStatus}
+          renderItem={renderJobStatus}
+          keyExtractor={(item) => item.jobTitle}
+        />
+      </View>
     </SafeAreaView>
   );
 };
 
-const pickerStyles = StyleSheet.create({
-  inputIOS: {
-    height: moderateVerticalScale(50),
-    width: '100%',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: moderateScale(10),
-    backgroundColor: '#fff',
-  },
-  inputAndroid: {
-    height: moderateVerticalScale(50),
-    width: '100%',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: moderateScale(10),
-    backgroundColor: '#fff',
-  },
-});
-
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
   },
-  scrollContainer: {
-    alignItems: "center",
-    paddingBottom: moderateVerticalScale(20),
-    paddingHorizontal: moderateScale(20),
+  topIcons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 25,
   },
-  title: {
-    fontWeight: "600",
-    marginTop: moderateVerticalScale(30),
-    fontSize: 25,
-    alignSelf: 'center',
+  profileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
   },
-  errorMsg: {
-    alignSelf: "flex-start",
-    marginLeft: moderateScale(25),
-    color: "red",
-    marginBottom: moderateVerticalScale(5),
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
-  buttonContainer: {
-    marginTop: moderateVerticalScale(30),
-    width: '100%',
-    justifyContent: 'center',
+  userInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  userEmail: {
+    fontSize: 16,
+    color: 'gray',
+  },
+  tagsSection: {
+    marginVertical: 20,
+  },
+  noTags: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  pickerContainer: {
-    width: '100%',
-    marginVertical: moderateVerticalScale(10),
+  noTagsText: {
+    fontSize: 16,
+    color: 'gray',
+    marginRight: 10,
   },
-  label: {
-    fontSize: moderateScale(16),
-    fontWeight: '500',
-    marginBottom: moderateVerticalScale(5),
+  tagContainer: {
+    backgroundColor: '#007BFF',
+    borderRadius: 10,
+    padding: 10,
+    marginRight: 10,
   },
-  photoContainer: {
-    width: scale(100),
-    height: scale(100),
-    borderRadius: scale(50),
-    borderWidth: 2,
-    borderColor: '#ddd',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    marginBottom: moderateVerticalScale(20),
+  tagText: {
+    color: 'white',
   },
-  profilePhoto: {
-    width: '100%',
+  jobStatusSection: {
+    marginVertical: 20,
+  },
+  jobStatusContainer: {
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 10,
+  },
+  jobTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  jobStatus: {
+    fontSize: 14,
+  },
+  sidebar: {
+    position: 'absolute',
+    left: 0,
+    top: 0, // Adjust this to zero so SafeAreaView handles the safe area.
+    width: 250,
     height: '100%',
-    borderRadius: scale(50),
+    backgroundColor: '#333',
+    zIndex: 10,
+    padding: 20,
+    borderTopRightRadius: 20, // Adds the border radius to the top-right corner
+    overflow: 'hidden', // Ensure content respects the border radius
+  },  
+  closeSidebar: {
+    alignSelf: 'flex-end',
   },
-  photoPlaceholder: {
-    fontSize: moderateScale(14),
-    color: '#aaa',
+  sidebarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 15,
+  },
+  sidebarText: {
+    color: 'white',
+    marginLeft: 10,
+    fontSize: 18,
+  },
+  absoluteBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9,
   },
 });
 
-export default Profile;
+export default ProfileScreen;

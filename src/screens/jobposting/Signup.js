@@ -176,7 +176,7 @@ const Signup = () => {
                 // Proceed with signup logic
               }
               else{
-                navigation.navigate('JobSearching');
+                navigation.navigate('Profile');
               }
             }}
           />
