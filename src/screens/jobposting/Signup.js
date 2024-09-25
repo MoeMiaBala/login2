@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import React, { useState } from "react";
-import { moderateScale, scale } from "react-native-size-matters";
+import { moderateScale, moderateVerticalScale, scale } from "react-native-size-matters";
 import CustomTextInput from "../../components/CustomTextInput";
 import CustomSolidBtn from "../../components/CustomSolidBtn";
 import CustomBorderBtn from "../../components/CustomBorderBtn";
@@ -19,7 +19,8 @@ import { Picker } from '@react-native-picker/picker';
 import { auth, db } from '../../../firebaseConfig'; // Assuming your Firebase config file is in the root directory
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { collection, addDoc } from "firebase/firestore";
-import crypto from 'crypto'; // Use crypto module
+//import crypto from 'expo-crypto'; // Use crypto module
+import * as Crypto from 'expo-crypto';
 
 const Signup = () => {
   const navigation = useNavigation();
@@ -42,6 +43,7 @@ const Signup = () => {
     confirmPassword: '',
     phone: '',
     address: '',
+    role: ''
   });
 
   const validate = () => {
@@ -112,47 +114,77 @@ const Signup = () => {
     });
   };
 
-  const hashPassword = (password) => {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, `sha512`).toString(`hex`);
-    return { salt, hash };
-  };
-
-  const verifyPassword = (password, salt, hash) => {
-    const newHash = crypto.pbkdf2Sync(password, salt, 1000, 64, `sha512`).toString(`hex`);
-    return newHash === hash;
-  };
-
-  const handleSignup = async () => {
-    if (!validate()) return;
-
+  const hashPassword = async (password) => {
     try {
-      // Hash the password with crypto
-      const { salt, hash } = hashPassword(form.password);
+        // Generate a random salt using expo-crypto
+        const saltBytes = await Crypto.getRandomBytesAsync(16);
+        const salt = Array.from(new Uint8Array(saltBytes))
+            .map(b => ('0' + b.toString(16)).slice(-2))
+            .join('');
+
+        // Create a hash using the password and salt
+        const hash = await Crypto.digestStringAsync(
+            Crypto.CryptoDigestAlgorithm.SHA512,
+            password + salt
+        );
+
+        return { salt, hash };
+    } catch (error) {
+        console.error("Error hashing password:", error);
+        throw error; // Rethrow the error for handling in the calling function
+    }
+};
+
+const verifyPassword = async (password, salt, hash) => {
+    try {
+        const newHash = await Crypto.digestStringAsync(
+            Crypto.CryptoDigestAlgorithm.SHA512,
+            password + salt
+        );
+        return newHash === hash;
+    } catch (error) {
+        console.error("Error verifying password:", error);
+        throw error; // Rethrow the error for handling in the calling function
+    }
+};
+
+const handleSignup = async () => {
+  if (!validate()) return;
+
+  try {
+      // Hash the password
+      const { salt, hash } = await hashPassword(form.password);
 
       // Firebase Auth: Sign up the user
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       const user = userCredential.user;
 
+      // Check if user is authenticated
+      if (!user) {
+          throw new Error("User authentication failed.");
+      }
+
       // Store additional user information in Firestore
       await addDoc(collection(db, "users"), {
-        uid: user.uid,
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        address: form.address,
-        role: selectedOption,
-        passwordSalt: salt, // Store the salt
-        passwordHash: hash   // Store the hash
+          uid: user.uid,
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          address: form.address,
+          role: selectedOption,
+          passwordSalt: salt,
+          passwordHash: hash
       });
 
       Alert.alert("Signup successful", "Account created successfully!");
       navigation.navigate("Profile");
 
-    } catch (error) {
-      Alert.alert("Signup Error", error.message);
-    }
-  };
+  } catch (error) {
+      console.error("Signup error:", error);
+      // The error handling part remains the same
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.container}>

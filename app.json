@@ -31,7 +31,7 @@
       "favicon": "./assets/favicon.png",
       "config": {
         "firebase": {
-          "apiKey": "AIzaSyDReR8oBXsEjPuh2WoPTbz7eRy56x1rIA0",
+          "apiKey": "",
           "authDomain": "hire-horizon-9a704.firebaseapp.com",
           
           "projectId": "hire-horizon-9a704",
