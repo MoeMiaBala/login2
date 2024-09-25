@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "508968229017",
+    "project_id": "hire-horizon-9a704",
+    "storage_bucket": "hire-horizon-9a704.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:508968229017:android:f5f22425bfc58be1ec0008",
+        "android_client_info": {
+          "package_name": "com.webweavers.horizon"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "508968229017-oph0d8vps86gnkjnkcaengojn06nu2j5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.webweavers.horizon",
+            "certificate_hash": "e20547b016033576be4d933af273836ca8e14373"
+          }
+        },
+        {
+          "client_id": "508968229017-ttmop4i18bki8tv08peau944lhbgq3qc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDReR8oBXsEjPuh2WoPTbz7eRy56x1rIA0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "508968229017-ttmop4i18bki8tv08peau944lhbgq3qc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -6,22 +6,25 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
-import {
-  moderateScale,
-  moderateVerticalScale,
-  scale,
-} from "react-native-size-matters";
+import { moderateScale, scale } from "react-native-size-matters";
 import CustomTextInput from "../../components/CustomTextInput";
 import CustomSolidBtn from "../../components/CustomSolidBtn";
 import CustomBorderBtn from "../../components/CustomBorderBtn";
-import Profile from "../profile";
 import { useNavigation } from "@react-navigation/native";
-import Icon from 'react-native-vector-icons/FontAwesome'; // FontAwesome for icons
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { Picker } from '@react-native-picker/picker'; 
+import { auth, db } from '../../../firebaseConfig'; // Assuming your Firebase config file is in the root directory
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { collection, addDoc } from "firebase/firestore";
+import crypto from 'crypto'; // Use crypto module
 
 const Signup = () => {
   const navigation = useNavigation();
+
+  const [selectedOption, setSelectedOption] = useState('Applicant');
 
   const [form, setForm] = useState({
     name: '',
@@ -43,8 +46,8 @@ const Signup = () => {
 
   const validate = () => {
     let valid = true;
-    const newErrors = { name: '', email: '', password: '', confirmPassword: '', phone: '', address: '' };
-  
+    const newErrors = { name: '', email: '', password: '', confirmPassword: '', phone: '', address: '', role: '' };
+
     if (form.name === '') {
       newErrors.name = 'Please enter a name';
       valid = false;
@@ -52,7 +55,7 @@ const Signup = () => {
       newErrors.name = 'Name must be at least 3 characters';
       valid = false;
     }
-  
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const trimmedEmail = form.email?.trim() || '';
     if (trimmedEmail === '') {
@@ -62,7 +65,7 @@ const Signup = () => {
       newErrors.email = 'Please enter a valid email';
       valid = false;
     }
-  
+
     if (form.password === '') {
       newErrors.password = 'Please enter a password';
       valid = false;
@@ -92,7 +95,12 @@ const Signup = () => {
       newErrors.address = 'Please enter an address';
       valid = false;
     }
-  
+
+    if (selectedOption === '') {
+      newErrors.role = 'Please select a country option';
+      valid = false;
+    }
+
     setErrors(newErrors);
     return valid;
   };
@@ -102,6 +110,48 @@ const Signup = () => {
       ...form,
       [field]: value,
     });
+  };
+
+  const hashPassword = (password) => {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, `sha512`).toString(`hex`);
+    return { salt, hash };
+  };
+
+  const verifyPassword = (password, salt, hash) => {
+    const newHash = crypto.pbkdf2Sync(password, salt, 1000, 64, `sha512`).toString(`hex`);
+    return newHash === hash;
+  };
+
+  const handleSignup = async () => {
+    if (!validate()) return;
+
+    try {
+      // Hash the password with crypto
+      const { salt, hash } = hashPassword(form.password);
+
+      // Firebase Auth: Sign up the user
+      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      const user = userCredential.user;
+
+      // Store additional user information in Firestore
+      await addDoc(collection(db, "users"), {
+        uid: user.uid,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        address: form.address,
+        role: selectedOption,
+        passwordSalt: salt, // Store the salt
+        passwordHash: hash   // Store the hash
+      });
+
+      Alert.alert("Signup successful", "Account created successfully!");
+      navigation.navigate("Profile");
+
+    } catch (error) {
+      Alert.alert("Signup Error", error.message);
+    }
   };
 
   return (
@@ -167,18 +217,22 @@ const Signup = () => {
         />
         {errors.address !== '' && <Text style={styles.errorMsg}>{errors.address}</Text>}
 
+        <Text style={styles.inputTitle}>Role</Text>
+        <Picker
+          value={form.role}
+          selectedValue={selectedOption}
+          onValueChange={(itemValue) => setSelectedOption(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Applicant" value="Applicant" />
+          <Picker.Item label="Employer" value="Employer" />
+        </Picker>
+        {errors.country !== '' && <Text style={styles.errorMsg}>{errors.country}</Text>}
+
         <View style={styles.buttonContainer}>
           <CustomSolidBtn
             title={"Sign Up"}
-            onClick={() => {
-              if (validate()) {
-                console.log("Signup validated successfully");
-                // Proceed with signup logic
-              }
-              else{
-                navigation.navigate('Profile');
-              }
-            }}
+            onClick={handleSignup}
           />
           <CustomBorderBtn
             title={"Login"}
@@ -187,14 +241,10 @@ const Signup = () => {
             }}
           />
 
-          {/* Social Auth Buttons */}
         <View style={styles.socialButtonsContainer}>
           <TouchableOpacity
             style={styles.socialButton}
-            onPress={() => {
-              // Add Google sign-in logic here
-              console.log("Google sign-in");
-            }}
+            onPress={() => console.log("Google sign-in")}
           >
             <Icon name="google" size={scale(24)} color="#DD4B39" />
             <Text style={styles.socialButtonText}>Sign up with Google</Text>
@@ -202,10 +252,7 @@ const Signup = () => {
 
           <TouchableOpacity
             style={styles.socialButton}
-            onPress={() => {
-              // Add Facebook sign-in logic here
-              console.log("Facebook sign-in");
-            }}
+            onPress={() => console.log("Facebook sign-in")}
           >
             <Icon name="facebook" size={scale(24)} color="#3b5998" />
             <Text style={styles.socialButtonText}>Sign up with Facebook</Text>
@@ -216,6 +263,7 @@ const Signup = () => {
     </SafeAreaView>
   );
 };
+
 
 export default Signup;
 
@@ -247,6 +295,15 @@ const styles = StyleSheet.create({
     marginLeft: moderateScale(25),
     color: "red",
     marginBottom: moderateVerticalScale(5),
+  },
+  picker: {
+    width: '90%',
+    alignSelf: 'center',
+    height: moderateVerticalScale(40),
+    marginBottom: moderateVerticalScale(10),
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 5,
   },
   socialButtonsContainer: {
     marginTop: moderateVerticalScale(20),

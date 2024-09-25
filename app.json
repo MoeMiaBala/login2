@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "login",
-    "slug": "login",
+    "slug": "hire-horizon",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,16 +12,43 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.webweavers.horizon",
+      "infoPlist":{
+        "CFBundleURLScheme": [
+          "com.googleusercontent.apps.508968229017-4h614sqcon9ihe9bk7fibi3ovt42ua30"
+        ]
+      }
     },
     "android": {
+      "package": "com.webweavers.horizon",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "config": {
+        "firebase": {
+          "apiKey": "AIzaSyDReR8oBXsEjPuh2WoPTbz7eRy56x1rIA0",
+          "authDomain": "hire-horizon-9a704.firebaseapp.com",
+          
+          "projectId": "hire-horizon-9a704",
+          "storageBucket": "hire-horizon-9a704.appspot.com",
+          "messagingSenderId": "508968229017",
+          "appId": "1:508968229017:android:f5f22425bfc58be1ec0008"
+          
+        }
+      }
+    },
+    "extra": {
+      "ngrokUrl": "https://77c6-105-245-24-11.ngrok-free.app",
+      "eas": {
+        "projectId": "dcc9695d-c4b9-46f2-a8df-68363ebceb10"
+      }
+    },
+    "owner": "kaygee123",
+    "scheme": "login" 
   }
 }
