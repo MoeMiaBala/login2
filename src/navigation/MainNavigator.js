@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native'
+import { View, Text, SafeAreaView, } from 'react-native'
 import React from 'react'
 import Splash from '../screens/onboarding/Splash'
 import { createStackNavigator } from '@react-navigation/stack';
@@ -16,6 +16,7 @@ const Stack = createStackNavigator();
 
 const MainNavigator = () => {
   return (
+    
     <NavigationContainer>
         <Stack.Navigator>
             <Stack.Screen name='Splash' 

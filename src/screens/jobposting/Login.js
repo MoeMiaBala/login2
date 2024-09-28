@@ -26,7 +26,7 @@ const Login = () => {
   const [request, response, promptAsync] = Google.useAuthRequest({
       androidClientId: "YOUR_ANDROID_CLIENT_ID",
       iosClientId: "YOUR_IOS_CLIENT_ID",
-      webClientId: "YOUR_WEB_CLIENT_ID",
+      webClientId: "508968229017-ttmop4i18bki8tv08peau944lhbgq3qc.apps.googleusercontent.com",
       scopes: ['profile', 'email'],
   });
 
@@ -78,8 +78,10 @@ const Login = () => {
       if (validate()) {
           signInWithEmailAndPassword(auth, form.email, form.password)
               .then((userCredential) => {
+                  const { uid } = userCredential.user;
                   console.log('User logged in:', userCredential.user);
-                  navigation.navigate('Profile'); // Navigate to the Profile page
+                  console.log(uid)
+                  navigation.navigate('Profile', { uid }); // Navigate to the Profile page
               })
               .catch((error) => {
                   console.error('Error during login:', error);
@@ -152,8 +154,7 @@ const Login = () => {
             </View>
         </SafeAreaView>
     );
-  };
-  
+};
 
 export default Login;
 

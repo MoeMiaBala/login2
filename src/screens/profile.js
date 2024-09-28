@@ -1,18 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur'; // For the blur effect
 import { Easing } from 'react-native';
+import { query, where, getDocs, collection } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = ({ navigation, route }) => {
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const slideAnim = useState(new Animated.Value(-250))[0]; // Sidebar sliding animation
+  const { uid } = route.params; // Get the UID passed from Login
+  const [userData, setUserData] = useState(null);
 
   const userInfo = {
     name: 'John Doe',
     email: 'john.doe@example.com',
-    profileImage: 'https://example.com/profile.jpg',
+    profileImage: 'https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg',
   };
+
+  useEffect(() => {
+    // Fetch user data from Firestore using the uid field
+    const fetchUserData = async () => {
+      try {
+        console.log('UID:', uid); // Log the UID to ensure it's correct
+        
+        const usersCollection = collection(db, 'users');
+        const q = query(usersCollection, where('uid', '==', uid));
+        const querySnapshot = await getDocs(q); // Query based on uid field
+  
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0]; // Get the first matching document
+          setUserData(userDoc.data()); // Set user data if found
+          console.log('User data:', userData);
+        } else {
+          console.log('No such user found!');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+  
+    if (uid) {
+      fetchUserData(); // Call the function only if uid is available
+    }
+  }, [uid]);
 
   const tags = ['hello','there'];
 
@@ -102,8 +133,14 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.profileSection}>
         <Image source={{ uri: userInfo.profileImage }} style={styles.profileImage} />
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{userInfo.name}</Text>
-          <Text style={styles.userEmail}>{userInfo.email}</Text>
+          {userData ? ( // Check if userData is available
+          <>
+            <Text style={styles.userName}>{userData.name}</Text> 
+            <Text style={styles.userEmail}>{userData.email}</Text>
+          </>
+          ) : (
+            <Text style={styles.loadingText}>Loading user data or no user found</Text> // Display message when userData is not available
+          )}
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen')}>
           <Ionicons name="create-outline" size={24} color="black" />
