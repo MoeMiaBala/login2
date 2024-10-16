@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Animated } from 'react-native';
+import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur'; // For the blur effect
-import { Easing } from 'react-native';
-import { query, where, getDocs, collection } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
+import { fetchUserdata, fetchTags, saveTags, fetchUserTags, fetchUserApplications } from '../utils/dbActions';
+import { auth } from '../../firebaseConfig';
 
 const ProfileScreen = ({ navigation, route }) => {
-  const [isSidebarVisible, setSidebarVisible] = useState(false);
-  const slideAnim = useState(new Animated.Value(-250))[0]; // Sidebar sliding animation
   const { uid } = route.params; // Get the UID passed from Login
   const [userData, setUserData] = useState(null);
+  const [tags, setTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [jobApplications, setJobApplications] = useState([]);
+  const user = auth.currentUser;
 
   const userInfo = {
     name: 'John Doe',
@@ -19,50 +20,118 @@ const ProfileScreen = ({ navigation, route }) => {
   };
 
   useEffect(() => {
-    // Fetch user data from Firestore using the uid field
-    const fetchUserData = async () => {
-      try {
-        console.log('UID:', uid); // Log the UID to ensure it's correct
-        
-        const usersCollection = collection(db, 'users');
-        const q = query(usersCollection, where('uid', '==', uid));
-        const querySnapshot = await getDocs(q); // Query based on uid field
-  
-        if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0]; // Get the first matching document
-          setUserData(userDoc.data()); // Set user data if found
-          console.log('User data:', userData);
-        } else {
-          console.log('No such user found!');
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
+    const fetchData = async () => {
+      const userD = await fetchUserdata(user);
+      setUserData(userD);
+      const fetchedTags = await fetchTags(); // Fetch tags from DB
+      //console.log(fetchedTags[0])
+      const tagsArray = fetchedTags[0].split(',').map(tag => tag.trim()); // Assuming the tags are stored as a comma-separated string
+      setTags(tagsArray);
+      //console.log("tags array", tagsArray);
+      const useTag = await fetchUserTags(user);
+      setSelectedTags(useTag);
+
+      const applications = await fetchUserApplications(uid);
+      setJobApplications(applications);
     };
   
-    if (uid) {
-      fetchUserData(); // Call the function only if uid is available
-    }
-  }, [uid]);
+    fetchData();
+  }, []);
 
-  const tags = ['hello','there'];
+  //const tags = ['hello','there'];
 
+  const toggleTag = (tag) => {
+    setSelectedTags((prevTags) =>
+      prevTags.includes(tag) ? prevTags.filter(t => t !== tag) : [...prevTags, tag]
+    );
+  };
+
+  const renderSelectedTags = () => {
+    const displayedTags = selectedTags.slice(0, 5);
+    return (
+      <View style={styles.selectedTagsContainer}>
+        {displayedTags.map((tag, index) => (
+          <View key={index} style={styles.tagContainer}>
+            <Text style={styles.tagText}>{tag}</Text>
+          </View>
+        ))}
+        {selectedTags.length > 5 && (
+          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.tagContainer}>
+            <Text style={styles.tagText}>...</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Ionicons name="add-circle-outline" size={30} color="black" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderTagModal = () => {
+    // Ensure unique tags
+    const uniqueTags = [...new Set(tags)];
+  
+    return (
+      <Modal
+        transparent={true}
+        animationType="slide"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Select Tags</Text>
+            <FlatList
+              data={uniqueTags}
+              renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => toggleTag(item)} style={styles.tagItem}>
+                  <Text style={styles.modalTagText}>{item}</Text>
+                  {selectedTags.includes(item) && (
+                    <Ionicons name="checkmark-circle" size={20} color="green" />
+                  )}
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item, index) => item + index} // Ensure a unique key
+            />
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => saveTags(uid, selectedTags)} style={styles.saveButton}>
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const renderJobApplications = () => {
+    return jobApplications.length > 0 ? (
+      <FlatList
+        data={jobApplications}
+        renderItem={({ item }) => (
+          <View style={styles.jobApplicationContainer}>
+            <Text style={styles.jobTitle}>{item.jobTitle}</Text>
+            <Text style={styles.jobStatus}>{item.status}</Text>
+          </View>
+        )}
+        keyExtractor={(item) => item.jobId} // Use a unique identifier for each job
+      />
+    ) : (
+      <Text style={styles.noApplicationsText}>No applications found.</Text>
+    );
+  };
+  
+  
   const jobStatus = [
     { jobTitle: 'Frontend Developer', status: 'Applied' },
     { jobTitle: 'UI Designer', status: 'In Review' },
     { jobTitle: 'Backend Developer', status: 'Interview Scheduled' },
+    { jobTitle: 'Data Scientist', status: 'Rejected' }
   ];
-
-  // Function to toggle sidebar visibility
-  const toggleSidebar = () => {
-    Animated.timing(slideAnim, {
-      toValue: isSidebarVisible ? -250 : 0, // Sidebar width
-      duration: 300,
-      useNativeDriver: true,
-      easing: Easing.ease,
-    }).start();
-    setSidebarVisible(!isSidebarVisible);
-  };
 
   // Color coding job status
   const getJobStatusStyle = (status) => {
@@ -73,6 +142,8 @@ const ProfileScreen = ({ navigation, route }) => {
         return { backgroundColor: '#fff8e1', color: '#ffb300' };
       case 'Interview Scheduled':
         return { backgroundColor: '#e8f5e9', color: '#388e3c' };
+      case 'Rejected':
+        return { backgroundColor: '#ffebee', color: '#d32f2f' };
       default:
         return { backgroundColor: '#f4f4f4', color: 'gray' };
     }
@@ -97,33 +168,9 @@ const ProfileScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Blur the screen when sidebar is visible */}
-      {isSidebarVisible && <BlurView intensity={50} style={styles.absoluteBlur} />}
-
-      {/* Sidebar */}
-      <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
-        <TouchableOpacity onPress={toggleSidebar} style={styles.closeSidebar}>
-          <Ionicons name="close" size={24} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sidebarItem}>
-          <Ionicons name="home-outline" size={24} color="white" />
-          <Text style={styles.sidebarText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sidebarItem}>
-          <Ionicons name="chatbubble-outline" size={24} color="white" />
-          <Text style={styles.sidebarText}>Chats</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sidebarItem}>
-          <Ionicons name="log-out-outline" size={24} color="white" />
-          <Text style={styles.sidebarText}>Logout</Text>
-        </TouchableOpacity>
-      </Animated.View>
 
       {/* Top Icons */}
       <View style={styles.topIcons}>
-        <TouchableOpacity>
-          <Ionicons name="menu-outline" size={24} color="black" onPress={toggleSidebar} />
-        </TouchableOpacity>
         <TouchableOpacity>
           <Ionicons name="settings-outline" size={24} color="black" onPress={() => {navigation.navigate('Settings')}}/>
         </TouchableOpacity>
@@ -146,26 +193,12 @@ const ProfileScreen = ({ navigation, route }) => {
           <Ionicons name="create-outline" size={24} color="black" />
         </TouchableOpacity>
       </View>
+      
 
       {/* Tags Section */}
       <View style={styles.tagsSection}>
         <Text style={styles.sectionTitle}>Your Interests:</Text>
-        {tags.length === 0 ? (
-          <View style={styles.noTags}>
-            <Text style={styles.noTagsText}>No interests yet. Add one!</Text>
-            <TouchableOpacity>
-              <Ionicons name="add-circle-outline" size={30} color="black" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <FlatList
-            data={tags}
-            horizontal
-            renderItem={({ item }) => renderTag(item)}
-            keyExtractor={(item) => item}
-            showsHorizontalScrollIndicator={false}
-          />
-        )}
+        {renderSelectedTags()}
       </View>
 
       {/* Job Status Section */}
@@ -177,6 +210,9 @@ const ProfileScreen = ({ navigation, route }) => {
           keyExtractor={(item) => item.jobTitle}
         />
       </View>
+
+      {renderTagModal()}
+      
     </SafeAreaView>
   );
 };
@@ -187,6 +223,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
     paddingHorizontal: 20,
+    padding: 20
   },
   topIcons: {
     flexDirection: 'row',
@@ -233,9 +270,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginRight: 10,
+    marginBottom: 8
   },
   tagText: {
     color: 'white',
+  },
+  modalTagText: {
+    color: "#000",
   },
   jobStatusSection: {
     marginVertical: 20,
@@ -252,38 +293,61 @@ const styles = StyleSheet.create({
   jobStatus: {
     fontSize: 14,
   },
-  sidebar: {
-    position: 'absolute',
-    left: 0,
-    top: 0, // Adjust this to zero so SafeAreaView handles the safe area.
-    width: 250,
-    height: '100%',
-    backgroundColor: '#333',
-    zIndex: 10,
-    padding: 20,
-    borderTopRightRadius: 20, // Adds the border radius to the top-right corner
-    overflow: 'hidden', // Ensure content respects the border radius
-  },  
-  closeSidebar: {
-    alignSelf: 'flex-end',
+  tagsSection: {
+    marginVertical: 20,
   },
-  sidebarItem: {
+  selectedTagsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 15,
+    flexWrap: 'wrap',
   },
-  sidebarText: {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+    height: '50%'
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  tagItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+  },
+  closeButton: {
+    marginTop: 10,
+    backgroundColor: '#00796b',
+    padding: 10,
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  saveButton: {
+    marginTop: 10,
+    backgroundColor: 'blue', // Customize your button color
+    padding: 10,
+    borderRadius: 5,
+    marginLeft: 10
+  },
+  saveButtonText: {
     color: 'white',
-    marginLeft: 10,
-    fontSize: 18,
-  },
-  absoluteBlur: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9,
+    fontWeight: 'bold',
   },
 });
 

@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'; // FontAwesome for ico
 import * as Google from 'expo-auth-session/providers/google';
 import { auth } from '../../../firebaseConfig';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { fetchUserdata } from '../../utils/dbActions';
 
 const Login = () => {
     const navigation = useNavigation();
@@ -38,8 +39,8 @@ const Login = () => {
           const credential = GoogleAuthProvider.credential(id_token);
           signInWithCredential(auth, credential)
               .then((userCredential) => {
-                  console.log('User logged in:', userCredential.user);
-                  navigation.navigate('Profile'); // Navigate to the Profile page
+                  //console.log('User logged in:', userCredential.user);
+                  navigation.navigate('Posts'); // Navigate to the Profile page
               })
               .catch((error) => {
                   console.log('Error during sign-in:', error);
@@ -75,20 +76,33 @@ const Login = () => {
   };
 
   const handleLogin = () => {
-      if (validate()) {
-          signInWithEmailAndPassword(auth, form.email, form.password)
-              .then((userCredential) => {
-                  const { uid } = userCredential.user;
-                  console.log('User logged in:', userCredential.user);
-                  console.log(uid)
-                  navigation.navigate('Profile', { uid }); // Navigate to the Profile page
-              })
-              .catch((error) => {
-                  console.error('Error during login:', error);
-                  // Handle error messages based on the error codes
-              });
-      }
+    if (validate()) {
+      signInWithEmailAndPassword(auth, form.email.trim(), form.password)
+        .then(async (userCredential) => {
+          const { uid } = userCredential.user;
+          console.log(uid);
+  
+          const userData = await fetchUserdata(userCredential.user);
+  
+          if (userData && userData.role) {
+            // Check the role field and navigate accordingly
+            if (userData.role === 'Employer') {
+              navigation.navigate('EmployerDashboard', { uid }); // Navigate to employer dashboard
+            } else if (userData.role === 'Applicant') {
+              navigation.navigate('JobSearching', { uid }); // Navigate to job searching page
+            } else {
+              console.error('Unknown user role:', userData.role);
+            }
+          } else {
+            console.error('Role not found or user data invalid');
+          }
+        })
+        .catch((error) => {
+          console.error('Error during login:', error);
+        });
+    }
   };
+  
   
     return (
         <SafeAreaView style={styles.container}>

@@ -1,20 +1,72 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ScrollView, TextInput, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { fetchUserdata, fetchJobData, fetchTags } from '../utils/dbActions';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db, auth } from '../../firebaseConfig'; // Adjust path as needed
 
-const EmployerDashboard = ({ navigation }) => {
+const EmployerDashboard = ({ navigation, route }) => {
+  const { uid } = route.params; // Get the user UID passed from login
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [loading, setLoading] = useState(false);
+  const [userName, setUserName] = useState(''); // For greeting
+  const [totalApplicants, setTotalApplicants] = useState(0); // For total applicants
+  const [jobPosts, setJobPosts] = useState([]);
 
-  // Sample job postings data
-  const jobPosts = [
-    { id: '1', title: 'Senior Developer', applicants: 25, status: 'Active' },
-    { id: '2', title: 'Project Manager', applicants: 10, status: 'Closed' },
-    // Add more job posts as needed
-  ];
+  // Fetch employer data and job posts on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      
+      try {
+        // Fetch employer (user) data
+        const userData = await fetchUserdata({ uid });
+        if (userData) {
+          setUserName(userData.name); // Set employer name for greeting
+        }
 
-  const filteredJobPosts = jobPosts.filter(post => {
+        // Fetch jobs posted by the current employer
+        const jobsSnapshot = await getDocs(
+          query(collection(db, 'jobs'), where('employerId', '==', uid))
+        );
+
+        let total = 0;
+        const jobsList = jobsSnapshot.docs.map((doc) => {
+          const job = doc.data();
+          total += job.applicants || 0; // Accumulate total applicants
+          return {
+            id: doc.id,
+            title: job.jobTitle,
+            applicants: job.applicants || 0,
+            status: job.status || 'Active', // Default to 'Active' if no status
+          };
+        });
+
+        setJobPosts(jobsList); // Set job posts for rendering
+        setTotalApplicants(total); // Set total applicants
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [uid]);
+
+  const filteredJobPosts = jobPosts.filter((post) => {
+    console.log(post);
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = selectedStatus === 'All' || post.status === selectedStatus;
     return matchesSearch && matchesStatus;
@@ -35,14 +87,9 @@ const EmployerDashboard = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Icons */}
-      <View style={styles.topIcons}>
-        <TouchableOpacity onPress={() => navigation.toggleDrawer()}>
-          <Ionicons name="menu-outline" size={24} color="black" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Chats')}>
-          <Ionicons name="chatbubble-outline" size={24} color="black" />
-        </TouchableOpacity>
+      {/* Greeting */}
+      <View style={styles.greetingContainer}>
+        <Text style={styles.greeting}>Hello, {userName}</Text>
       </View>
 
       {/* Dashboard Overview */}
@@ -50,11 +97,11 @@ const EmployerDashboard = ({ navigation }) => {
         <Text style={styles.overviewTitle}>Dashboard Overview</Text>
         <View style={styles.metrics}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>50</Text>
+            <Text style={styles.metricValue}>{jobPosts.length}</Text>
             <Text style={styles.metricLabel}>Jobs Posted</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>120</Text>
+            <Text style={styles.metricValue}>{totalApplicants}</Text>
             <Text style={styles.metricLabel}>Total Applicants</Text>
           </View>
         </View>
@@ -94,7 +141,7 @@ const EmployerDashboard = ({ navigation }) => {
       </View>
 
       {/* Post a Job Button */}
-      <TouchableOpacity style={styles.postJobButton} onPress={() => navigation.navigate('PostJob')}>
+      <TouchableOpacity style={styles.postJobButton} onPress={() => navigation.navigate('JobForm')}>
         <Text style={styles.postJobButtonText}>Post a Job</Text>
       </TouchableOpacity>
 
@@ -106,10 +153,26 @@ const EmployerDashboard = ({ navigation }) => {
           <FlatList
             data={filteredJobPosts}
             renderItem={renderJobPost}
-            keyExtractor={item => item.id}
+            keyExtractor={(item) => item.id}
           />
         </ScrollView>
       )}
+
+      {/* Bottom Navigation Bar */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('EmployerDashboard', {uid: auth.currentUser.uid})}>
+          <Ionicons name="home-outline" size={28} color="#3F6CDF" />
+          <Text style={styles.navText}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Profile', {uid: auth.currentUser.uid})}>
+          <Ionicons name="person-outline" size={28} color="black" />
+          <Text style={styles.navText}>Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Settings', {uid: auth.currentUser.uid})}>
+          <Ionicons name="settings-outline" size={28} color="black" />
+          <Text style={styles.navText}>Settings</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -125,6 +188,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  greetingContainer: {
+    padding: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  greeting: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  iconButton: {
+    padding: 8,
   },
   overview: {
     marginBottom: 16,
@@ -233,12 +307,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   jobTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   jobDetails: {
     fontSize: 14,
     color: '#555',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10,
+    borderTopWidth: 1,
+    borderColor: '#ddd',
+  },
+  navButton: {
+    alignItems: 'center',
+  },
+  navText: {
+    fontSize: 12,
+    color: '#000',
   },
 });
 

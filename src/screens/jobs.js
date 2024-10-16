@@ -1,40 +1,29 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Image, StyleSheet, SafeAreaView, Animated, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Image, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { fetchJobData, applyForJob, fetchUserApplications } from '../utils/dbActions';
+import { auth } from '../../firebaseConfig';
 
-const JobPostsScreen = () => {
+const JobPostsScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedJobId, setSelectedJobId] = useState(null); // To track the selected job for details
-  const [bookmarkedJobs, setBookmarkedJobs] = useState({}); // To track bookmarked jobs
+  const [jobs, setJobs] = useState([]);
+  const [bookmarkedJobs, setBookmarkedJobs] = useState({});
+  const user = auth.currentUser;
+  
+  useEffect(() => {
+    const loadJobData = async () => {
+      try {
+        const jobsList = await fetchJobData();
+        setJobs(jobsList);
+      } catch (error) {
+        Alert.alert('Error', error.message); // Handle error here
+      }
+    };
 
-  // Hardcoded job data
-  const jobData = [
-    {
-      id: '1',
-      company: 'Company A',
-      location: 'Location A',
-      title: 'Senior Developer',
-      type: 'Full-time',
-      salary: '$100,000/year',
-      image: require('../images/logo.png'),
-      posted: '5 min ago',
-      deadline: '7 days'
-    },
-    {
-      id: '2',
-      company: 'Company B',
-      location: 'Location B',
-      title: 'Project Manager',
-      type: 'Part-time',
-      salary: '$80,000/year',
-      image: require('../images/logo.png'),
-      posted: '20 min ago',
-      deadline: '3 days'
-    },
-    // Add more hardcoded jobs as needed
-  ];
+    loadJobData();
+  }, []);
 
-  const filteredJobs = jobData.filter(job => 
+  const filteredJobs = jobs.filter(job =>
     job.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -75,37 +64,79 @@ const JobPostsScreen = () => {
         data={filteredJobs}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.jobCard}
-            onPress={() => setSelectedJobId(item.id)}
-          >
+          <View style={styles.jobCard}>
+            {/* Top section: Date posted and bookmark */}
+            <View style={styles.topRow}>
+              <Text style={styles.posted}>{item.timestamp}</Text>
+              <TouchableOpacity onPress={() => toggleBookmark(item.id)}>
+                <Ionicons
+                  name={bookmarkedJobs[item.id] ? 'bookmark' : 'bookmark-outline'}
+                  size={24}
+                  color={bookmarkedJobs[item.id] ? 'blue' : 'black'}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Job details */}
             <View style={styles.jobInfo}>
               <Image source={item.image} style={styles.companyLogo} />
               <View style={styles.jobDetails}>
                 <Text style={styles.jobTitle}>{item.title}</Text>
-                <Text style={styles.jobType}>{item.type}</Text>
                 <Text style={styles.companyName}>{item.company}</Text>
-                <Text style={styles.location}>{item.location}</Text>
-                {selectedJobId === item.id && (
-                  <>
-                    <Text style={styles.salary}>{item.salary}</Text>
-                    <Text style={styles.posted}>{item.posted}</Text>
-                    <Text style={styles.deadline}>{item.deadline}</Text>
-                  </>
-                )}
               </View>
             </View>
-            <TouchableOpacity onPress={() => toggleBookmark(item.id)}>
-              <Ionicons
-                name={bookmarkedJobs[item.id] ? 'bookmark' : 'bookmark-outline'}
-                size={24}
-                color={bookmarkedJobs[item.id] ? 'blue' : 'black'}
-              />
-            </TouchableOpacity>
-          </TouchableOpacity>
+
+            <View style={styles.detailRow}>
+              <MaterialIcons name="work-outline" size={16} color="#888" />
+              <Text style={styles.jobType}>{item.type}</Text>
+              <MaterialIcons name="attach-money" size={16} color="#888" />
+              <Text style={styles.salary}>{item.salary}</Text>
+              <MaterialIcons name="location-on" size={16} color="#888" />
+              <Text style={styles.location}>{item.location}</Text>
+              <MaterialIcons name="schedule" size={16} color="#888" />
+              <Text style={styles.contract}>{item.contract}</Text>
+            </View>
+
+            {/* Job description */}
+            <Text style={styles.description}>{item.description}</Text>
+
+            {/* Action buttons */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity style={styles.viewButton}>
+                <Text style={styles.buttonText}>View Details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => applyForJob(user.uid, item.id)} style={styles.applyButton}>
+                <Text style={styles.buttonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
         contentContainerStyle={styles.listContent}
       />
+
+<View style={{
+        height: 70,
+        backgroundColor: '#fff',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        borderTopWidth: 1,
+        borderColor: '#ddd',
+        elevation: 5,
+      }}>
+        <TouchableOpacity onPress={() => navigation.navigate('applicantJobSearch')}>
+          <Ionicons name='home-outline' size={28} color='#999' />
+          <Text style={{ color: '#999' }}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Posts')}>
+          <Ionicons name='briefcase-outline' size={28} color='#3F6CDF' />
+          <Text style={{ color: '#3F6CDF' }}>Jobs</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile', {uid: user.uid})}>
+          <Ionicons name='person-outline' size={28} color='#999' />
+          <Text style={{ color: '#999' }}>Profile</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -143,13 +174,25 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 9,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 8,
+  },
+  posted: {
+    fontSize: 12,
+    color: '#888',
   },
   jobInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
   companyLogo: {
     width: 50,
@@ -157,39 +200,66 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   jobDetails: {
-    marginLeft: 8,
+    marginLeft: 12,
+    flex: 1,
   },
   jobTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-  },
-  jobType: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#888',
+    color: '#000',
   },
   companyName: {
     fontSize: 14,
     fontWeight: '500',
+    color: '#888',
   },
-  location: {
-    fontSize: 12,
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  jobType: {
+    marginLeft: 4,
+    marginRight: 8,
     color: '#888',
   },
   salary: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  posted: {
-    fontSize: 12,
+    marginLeft: 4,
+    marginRight: 8,
     color: '#888',
-    marginTop: 4,
   },
-  deadline: {
-    fontSize: 12,
-    color: 'red',
-    marginTop: 4,
+  location: {
+    marginLeft: 4,
+    marginRight: 8,
+    color: '#888',
+  },
+  contract: {
+    marginLeft: 4,
+    color: '#888',
+  },
+  description: {
+    fontSize: 14,
+    color: '#888',
+    marginVertical: 8,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  viewButton: {
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#3F6CDF',
+  },
+  applyButton: {
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#28a745',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   listContent: {
     padding: 16,

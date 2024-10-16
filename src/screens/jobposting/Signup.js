@@ -158,6 +158,7 @@ const handleSignup = async () => {
       // Firebase Auth: Sign up the user
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       const user = userCredential.user;
+      console.log(user.uid);
 
       // Check if user is authenticated
       if (!user) {
@@ -173,11 +174,13 @@ const handleSignup = async () => {
           address: form.address,
           role: selectedOption,
           passwordSalt: salt,
-          passwordHash: hash
+          passwordHash: hash,
+          tags: '',
+          image: ''
       });
 
       Alert.alert("Signup successful", "Account created successfully!");
-      navigation.navigate("Profile");
+      navigation.navigate("Profile", {uid: user.uid});
 
   } catch (error) {
       console.error("Signup error:", error);

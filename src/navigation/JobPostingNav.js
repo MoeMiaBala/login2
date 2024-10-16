@@ -3,6 +3,7 @@ import React from 'react'
 import { createStackNavigator } from '@react-navigation/stack'
 import Login from '../screens/jobposting/Login'
 import Signup from '../screens/jobposting/Signup'
+import { auth } from '../../firebaseConfig'
 
 const STACK=createStackNavigator() 
 const JobPostingNav = () => {

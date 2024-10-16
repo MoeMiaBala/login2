@@ -1,29 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Animated, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur'; // For the blur effect
-import { Easing } from 'react-native';
 
 const SettingsScreen = ({ navigation }) => {
-  const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState('Light');
   const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [isNotificationsExpanded, setNotificationsExpanded] = useState(false);
   const [isPrivacyExpanded, setPrivacyExpanded] = useState(false);
   const [isAccountExpanded, setAccountExpanded] = useState(false);
-
-  const slideAnim = useState(new Animated.Value(-250))[0]; // Sidebar sliding animation
-
-  // Function to toggle sidebar visibility
-  const toggleSidebar = () => {
-    Animated.timing(slideAnim, {
-      toValue: isSidebarVisible ? -250 : 0, // Sidebar width
-      duration: 300,
-      useNativeDriver: true,
-      easing: Easing.ease,
-    }).start();
-    setSidebarVisible(!isSidebarVisible);
-  };
+  const [isThemeExpanded, setThemeExpanded] = useState(false);
+  const [isLanguageExpanded, setLanguageExpanded] = useState(false);
 
   // Options for themes and languages
   const themes = ['Light', 'Dark', 'Blue'];
@@ -39,10 +25,7 @@ const SettingsScreen = ({ navigation }) => {
       }}
     >
       <Text style={styles.optionText}>{item}</Text>
-      {type === 'Theme' && selectedTheme === item && (
-        <Ionicons name="checkmark-circle" size={24} color="green" />
-      )}
-      {type === 'Language' && selectedLanguage === item && (
+      {((type === 'Theme' && selectedTheme === item) || (type === 'Language' && selectedLanguage === item)) && (
         <Ionicons name="checkmark-circle" size={24} color="green" />
       )}
     </TouchableOpacity>
@@ -60,6 +43,12 @@ const SettingsScreen = ({ navigation }) => {
       case 'Account':
         setAccountExpanded(!isAccountExpanded);
         break;
+      case 'Theme':
+        setThemeExpanded(!isThemeExpanded);
+        break;
+      case 'Language':
+        setLanguageExpanded(!isLanguageExpanded);
+        break;
       default:
         break;
     }
@@ -67,54 +56,38 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Blur the screen when sidebar is visible */}
-      {isSidebarVisible && <BlurView intensity={50} style={styles.absoluteBlur} />}
-
-      {/* Sidebar */}
-      <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
-        <TouchableOpacity onPress={toggleSidebar} style={styles.closeSidebar}>
-          <Ionicons name="close" size={24} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sidebarItem}>
-          <Ionicons name="home-outline" size={24} color="white" />
-          <Text style={styles.sidebarText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sidebarItem}>
-          <Ionicons name="chatbubble-outline" size={24} color="white" />
-          <Text style={styles.sidebarText}>Chats</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sidebarItem}>
-          <Ionicons name="log-out-outline" size={24} color="white" />
-          <Text style={styles.sidebarText}>Logout</Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* Top Icons */}
-      <View style={styles.topIcons}>
-        <TouchableOpacity onPress={toggleSidebar}>
-          <Ionicons name="menu-outline" size={24} color="black" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Ionicons name="person-outline" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Settings Content */}
       <ScrollView contentContainerStyle={styles.settingsContainer}>
-        <Text style={styles.sectionTitle}>Select Theme:</Text>
-        <FlatList
-          data={themes}
-          renderItem={({ item }) => renderOption(item, 'Theme')}
-          keyExtractor={(item) => item}
-        />
+        <Text style={styles.headerTitle}>Settings</Text>
 
-        <Text style={styles.sectionTitle}>Select Language:</Text>
-        <FlatList
-          data={languages}
-          renderItem={({ item }) => renderOption(item, 'Language')}
-          keyExtractor={(item) => item}
-        />
+        {/* Theme Section */}
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Theme')}>
+          <Text style={styles.sectionTitle}>Select Theme</Text>
+          <Ionicons name={isThemeExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
+        </TouchableOpacity>
+        {isThemeExpanded && (
+          <FlatList
+            data={themes}
+            renderItem={({ item }) => renderOption(item, 'Theme')}
+            keyExtractor={(item) => item}
+            style={styles.dropdownContainer}
+          />
+        )}
 
+        {/* Language Section */}
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Language')}>
+          <Text style={styles.sectionTitle}>Select Language</Text>
+          <Ionicons name={isLanguageExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
+        </TouchableOpacity>
+        {isLanguageExpanded && (
+          <FlatList
+            data={languages}
+            renderItem={({ item }) => renderOption(item, 'Language')}
+            keyExtractor={(item) => item}
+            style={styles.dropdownContainer}
+          />
+        )}
+
+        {/* Notifications Section */}
         <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Notifications')}>
           <Text style={styles.sectionTitle}>Notifications</Text>
           <Ionicons name={isNotificationsExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
@@ -123,7 +96,7 @@ const SettingsScreen = ({ navigation }) => {
           <View style={styles.dropdownContainer}>
             <TouchableOpacity style={styles.optionContainer}>
               <Text style={styles.optionText}>Email Notifications</Text>
-              <Ionicons name="notifications-outline" size={24} color="black" />
+              <Ionicons name="mail-outline" size={24} color="black" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.optionContainer}>
               <Text style={styles.optionText}>Push Notifications</Text>
@@ -132,6 +105,7 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         )}
 
+        {/* Privacy Section */}
         <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Privacy')}>
           <Text style={styles.sectionTitle}>Privacy</Text>
           <Ionicons name={isPrivacyExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
@@ -149,6 +123,7 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         )}
 
+        {/* Account Section */}
         <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Account')}>
           <Text style={styles.sectionTitle}>Account</Text>
           <Ionicons name={isAccountExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
@@ -166,6 +141,22 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         )}
       </ScrollView>
+
+      {/* Navigation Area */}
+      <View style={styles.navigationContainer}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.navButton}>
+          <Ionicons name='home-outline' size={28} color='#3F6CDF' />
+          <Text style={styles.navText}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Jobs')} style={styles.navButton}>
+          <Ionicons name='briefcase-outline' size={28} color='#999' />
+          <Text style={styles.navText}>Jobs</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.navButton}>
+          <Ionicons name='person-outline' size={28} color='#999' />
+          <Text style={styles.navText}>Profile</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -174,30 +165,34 @@ const SettingsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#f9f9f9',
     paddingHorizontal: 20,
   },
-  topIcons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 25,
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginVertical: 20,
+    color: '#3F6CDF',
   },
   settingsContainer: {
-    marginTop: 20,
+    flexGrow: 1,
+    paddingBottom: 80, // Space for navigation bar
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginVertical: 10,
+    color: '#3F6CDF',
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingHorizontal: 10,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    marginVertical: 5,
+    elevation: 2,
   },
   dropdownContainer: {
     paddingVertical: 10,
@@ -208,44 +203,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#ffffff',
     marginVertical: 5,
+    elevation: 1,
   },
   optionText: {
     fontSize: 16,
+    color: '#555',
   },
-  sidebar: {
-    position: 'absolute',
-    left: 0,
-    top: 0, // Adjust this to zero so SafeAreaView handles the safe area.
-    width: 250,
-    height: '100%',
-    backgroundColor: '#333',
-    zIndex: 10,
-    padding: 20,
-    borderTopRightRadius: 20, // Adds the border radius to the top-right corner
-    overflow: 'hidden', // Ensure content respects the border radius
-  },
-  closeSidebar: {
-    alignSelf: 'flex-end',
-  },
-  sidebarItem: {
+  navigationContainer: {
+    height: 70,
+    backgroundColor: '#f9f9f9',
     flexDirection: 'row',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    marginVertical: 15,
+    borderTopWidth: 1,
+    borderColor: '#ddd',
+    elevation: 5,
   },
-  sidebarText: {
-    color: 'white',
-    marginLeft: 10,
-    fontSize: 18,
+  navButton: {
+    alignItems: 'center',
   },
-  absoluteBlur: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9,
+  navText: {
+    color: '#3F6CDF',
+    fontSize: 12,
   },
 });
 
