@@ -1,14 +1,20 @@
 import React ,{ useState, useEffect} from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchUserTags, fetchRecentListings, fetchRecommendations, fetchUserdata } from '../utils/dbActions';
+import { fetchUserTags, fetchRecentListings, fetchRecommendations, fetchUserdata, fetchJobData,  fetchUserData, applyForJob, fetchUserApplications } from '../utils/dbActions';
 import { auth } from '../../firebaseConfig';
 
 const JobSearchingNav = ({ route, navigation }) => {
   const [recommendedJobs, setRecommendedJobs] = useState([]);
   const [recentJobs, setRecentJobs] = useState([]);
   const [userTags, setUserTags] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [appliedJobs, setAppliedJobs] = useState([]);
+  const [jobDetails, setJobDetails] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [name, setName] = useState('');
+  const [image, setImage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const user = auth.currentUser
 
 
@@ -18,15 +24,223 @@ const JobSearchingNav = ({ route, navigation }) => {
       setUserTags(tags); // Set user tags
       const username = await fetchUserdata(user);
       setName(username.name);
-
+      setImage(username.image);
+      //console.log(image);
       if (tags.length > 0) {
         await fetchRecommendations(tags, setRecommendedJobs); // Pass userTags and setter
         await fetchRecentListings(tags, setRecentJobs); // Pass userTags and setter
+        
       }
     };
   
     fetchData();
   }, []);
+
+  
+
+  const openJobModal = async (job) => {
+    try {
+      const jobData = await fetchJobData(); // Fetch job details
+      const userData = await fetchUserData(job.employerId); // Fetch user details who posted the job
+      const filteredJobData = jobData.find(data => data.id === job.id);
+      const checkIfApplied = async () => {
+        const applications = await fetchUserApplications(user.uid);
+        const appliedJobIds = applications.map(application => application.jobId); // Map job IDs
+        setAppliedJobs(appliedJobIds);
+      };
+      //console.log(appliedJobs);
+      checkIfApplied();
+      if (filteredJobData) {
+        setJobDetails(filteredJobData); // Set the details if the job exists
+      } else {
+        console.error("Job not found with the provided ID.");
+      }
+      //console.log("dob detailes =",jobDetails);
+      setUserData(userData);
+      setModalVisible(true);
+    } catch (error) {
+      console.error('Error fetching job or user data:', error);
+    }
+  };
+
+  const closeJobModal = () => {
+    setModalVisible(false);
+  };
+
+  const filteredJobs = recentJobs.filter(job =>
+    job.jobTitle.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleApplyForJob = (job) => {
+    applyForJob(user.uid, job);
+    setModalVisible(false); // Optionally close the modal after applying
+  };
+
+  const renderJobCard = (job) => (
+    <View key={job.id}  style={{
+      backgroundColor: "#fff",
+      padding: 16,
+      borderRadius: 15,
+      width: 300,
+      marginRight: 16,
+      elevation: 3,
+      marginBottom: 16, // Added margin at the bottom
+      minHeight: 115, 
+      overflow: 'hidden',
+    }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image source={{ uri: image }} style={{ width: 50, height: 50, borderRadius: 50 }} />
+          <View style={{ marginLeft: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#171716' }}>{job.companyName}</Text>
+            <Text style={{ fontSize: 12, color: '#999' }}>{job.location}</Text>
+          </View>
+        </View>
+        <Ionicons name='bookmark-outline' size={24} color='#000' />
+      </View>
+  
+      <Text style={{ marginTop: 1, fontSize: 18, fontWeight: '600', color: '#171716' }}>{job.jobTitle}</Text>
+      <Text style={{ fontSize: 12, color: '#999' }}>{job.jobType}</Text>
+  
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 16
+      }}>
+        <TouchableOpacity style={{
+          backgroundColor: '#3F6CDF',
+          padding: 10,
+          borderRadius: 12,
+        }}>
+          <Text style={{ color: '#fff' }}>Apply Now</Text>
+        </TouchableOpacity>
+        <Text style={{
+          fontSize: 16,
+          fontWeight: '600',
+          color: '#171716',
+        }}>{job.salary}</Text>
+      </View>
+    </View>
+  );
+
+  const renderJobModal = () => {
+    //const hasApplied = appliedJobs.includes(jobDetails.id); // Check if the user has applied for this job
+    const hasApplied = jobDetails ? appliedJobs.includes(jobDetails.id) : false
+    return (
+      <Modal
+        transparent={true}
+        animationType="slide"
+        visible={modalVisible}
+        onRequestClose={closeJobModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.headerContainer}>
+              <Ionicons name="briefcase-outline" size={28} color="#3F6CDF" style={styles.icon} />
+              <Text style={styles.modalTitle}>Job Details</Text>
+            </View>
+  
+            {jobDetails && userData ? (
+              <View>
+                <View style={styles.detailRow}>
+                  <Ionicons name="business-outline" size={16} color="#3F6CDF" style={styles.iconDetail} />
+                  <Text style={styles.detailKey}>Company:</Text>
+                  <Text style={styles.detailValue}>{jobDetails.company}</Text>
+                </View>
+  
+                <View style={styles.detailRow}>
+                  <Ionicons name="location-outline" size={16} color="#3F6CDF" />
+                  <Text style={styles.detailKey}>Location:</Text>
+                  <Text style={styles.detailValue}>{jobDetails.location}</Text>
+                </View>
+  
+                <View style={styles.detailRow}>
+                  <Ionicons name="document-outline" size={16} color="#3F6CDF" style={styles.iconDetail} />
+                  <Text style={styles.detailKey}>Job Title:</Text>
+                  <Text style={styles.detailValue}>{jobDetails.title}</Text>
+                </View>
+  
+                <View style={styles.detailRow}>
+                  <Ionicons name="cash-outline" size={16} color="#3F6CDF" style={styles.iconDetail} />
+                  <Text style={styles.detailKey}>Salary:</Text>
+                  <Text style={styles.detailValue}>{jobDetails.salary}</Text>
+                </View>
+  
+                <View style={styles.detailRow}>
+                  <Ionicons name="time-outline" size={16} color="#3F6CDF" style={styles.iconDetail} />
+                  <Text style={styles.detailKey}>Job Type:</Text>
+                  <Text style={styles.detailValue}>{jobDetails.type}</Text>
+                </View>
+  
+                <View style={styles.detailRow}>
+                  <Ionicons name="person-outline" size={16} color="#3F6CDF" />
+                  <Text style={styles.detailKey}>Posted By:</Text>
+                  <Text style={styles.detailValue}>{userData.name}</Text>
+                </View>
+  
+                <View style={styles.detailRow}>
+                  <Ionicons name="calendar-outline" size={16} color="#3F6CDF" />
+                  <Text style={styles.detailKey}>Posted On:</Text>
+                  <Text style={styles.detailValue}>{jobDetails.posted}</Text>
+                </View>
+  
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity onPress={closeJobModal} style={styles.closeButton}>
+                    <Ionicons name="close-outline" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>Close</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => handleApplyForJob(jobDetails.id)} // Pass correct job ID
+                    style={[styles.applyButton, hasApplied && styles.disabledButton]} 
+                    disabled={hasApplied} // Disable if already applied
+                  >
+                    <Ionicons name="checkmark-outline" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>
+                      {hasApplied ? 'Already Applied' : 'Apply'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <Text>Loading job details...</Text>
+            )}
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const renderJobList = (job) => (
+    <TouchableOpacity onPress={() => openJobModal(job)} key={job.id} style={{
+      backgroundColor: '#fff',
+      padding: 16,
+      borderRadius: 9,
+      marginBottom: 16,
+      elevation: 2,
+    }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image source={{ uri: image }} style={{ width: 50, height: 50, borderRadius: 50 }} />
+          <View style={{ marginLeft: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#171716' }}>{job.jobTitle}</Text>
+            <Text style={{ fontSize: 12, color: '#999' }}>{job.jobType}</Text>
+          </View>
+        </View>
+        <Ionicons name='bookmark-outline' size={24} color='#000' />
+      </View>
+  
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 12,
+      }}>
+        <Text style={{ fontSize: 14, color: '#999' }}>{job.companyName}</Text>
+        <Text style={{ fontSize: 14, color: '#171716', fontWeight: '600' }}>{job.salary}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={{ flex: 1, marginTop: 35, backgroundColor: '#F5F6FA' }}>
@@ -84,6 +298,8 @@ const JobSearchingNav = ({ route, navigation }) => {
               fontSize: 16,
               color: '#333',
             }}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
         </View>
       </View>
@@ -111,7 +327,7 @@ const JobSearchingNav = ({ route, navigation }) => {
           color: '#171716'
         }}>Recent Listings</Text>
         <ScrollView showsVerticalScrollIndicator={false}>
-          {recentJobs.length > 0 ? recentJobs.map(renderJobList) : <Text>No Recent Listings</Text>}
+          {filteredJobs.length > 0 ? filteredJobs.map(renderJobList) : <Text>No Recent Listings</Text>}
         </ScrollView>
       </View>
 
@@ -134,89 +350,104 @@ const JobSearchingNav = ({ route, navigation }) => {
           <Ionicons name='briefcase-outline' size={28} color='#999' />
           <Text style={{ color: '#999' }}>Jobs</Text>
         </TouchableOpacity>
+        <TouchableOpacity>
+            <Ionicons name="chatbubble-outline" size={28} color="#999" />
+            <Text style={{ color: '#999' }}>Chat</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('Profile', {uid: user.uid})}>
           <Ionicons name='person-outline' size={28} color='#999' />
           <Text style={{ color: '#999' }}>Profile</Text>
         </TouchableOpacity>
       </View>
+
+      {renderJobModal()}
     </View>
   );
 }
 
-const renderJobCard = (job) => (
-  <View key={job.id} style={{
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 15,
-    width: 300,
-    marginRight: 16,
-    elevation: 3,
-  }}>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Image source={{ uri: job.image }} style={{ width: 50, height: 50, borderRadius: 50 }} />
-        <View style={{ marginLeft: 8 }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#171716' }}>{job.companyName}</Text>
-          <Text style={{ fontSize: 12, color: '#999' }}>{job.location}</Text>
-        </View>
-      </View>
-      <Ionicons name='bookmark-outline' size={24} color='#000' />
-    </View>
-
-    <Text style={{ marginTop: 16, fontSize: 18, fontWeight: '600', color: '#171716' }}>{job.jobTitle}</Text>
-    <Text style={{ fontSize: 12, color: '#999' }}>{job.jobType}</Text>
-
-    <View style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 16
-    }}>
-      <TouchableOpacity style={{
-        backgroundColor: '#3F6CDF',
-        padding: 10,
-        borderRadius: 12,
-      }}>
-        <Text style={{ color: '#fff' }}>Apply Now</Text>
-      </TouchableOpacity>
-      <Text style={{
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#171716',
-      }}>{job.salary}</Text>
-    </View>
-  </View>
-);
-
-const renderJobList = (job) => (
-  <TouchableOpacity key={job.id} style={{
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
     backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 9,
-    marginBottom: 16,
-    elevation: 2,
-  }}>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Image source={{ uri: job.image }} style={{ width: 50, height: 50, borderRadius: 50 }} />
-        <View style={{ marginLeft: 8 }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#171716' }}>{job.jobTitle}</Text>
-          <Text style={{ fontSize: 12, color: '#999' }}>{job.jobType}</Text>
-        </View>
-      </View>
-      <Ionicons name='bookmark-outline' size={24} color='#000' />
-    </View>
-
-    <View style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 12,
-    }}>
-      <Text style={{ fontSize: 14, color: '#999' }}>{job.companyName}</Text>
-      <Text style={{ fontSize: 14, color: '#171716', fontWeight: '600' }}>{job.salary}</Text>
-    </View>
-  </TouchableOpacity>
-);
+    borderRadius: 20,
+    padding: 20,
+    width: '85%',
+    alignItems: 'center',
+    elevation: 10,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#3F6CDF',
+    marginLeft: 10,
+  },
+  icon: {
+    marginRight: 10,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    width: '100%',
+  },
+  detailKey: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#171716',
+    width: '40%',
+    paddingLeft: 6,
+    marginRight: 8,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#666',
+    width: '60%',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    width: '100%',
+  },
+  closeButton: {
+    backgroundColor: '#FF3B30',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyButton: {
+    backgroundColor: '#4CD964',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#D3D3D3', // Grey out the button when disabled
+    marginLeft: 12
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 5,
+  },
+});
 
 export default JobSearchingNav

@@ -5,7 +5,7 @@ import { TextInput } from 'react-native-gesture-handler'
 
 const CustomTextInput = ({title, placeholder, value, onChangeText, bad}) => {
   return (
-    <View style={[styles.input, { borderColor: bad ? 'red' : '#e9e9e9' }]}>
+    <View style={[styles.input, { borderColor: bad ? 'red' : 'grey' }]}>
         <Text style={styles.title}>{title}</Text>
         <TextInput 
         placeholder={placeholder} 

@@ -1,5 +1,5 @@
 import { db } from "../../firebaseConfig";
-import {collection, addDoc, updateDoc, doc, increment, serverTimestamp, orderBy, limit, where, getDoc, getDocs, query} from 'firebase/firestore';
+import {collection, addDoc, updateDoc, doc, increment, serverTimestamp, orderBy, limit, where, getDoc, getDocs, query, arrayUnion} from 'firebase/firestore';
 
 export const addJob = async (jobData) => {
   try {
@@ -23,9 +23,10 @@ export const updateJob = async (jobId, jobData) => {
 export const applyForJob = async (userId, jobId) => {
   try {
     // Query the users collection to find the user with the given userId
+    //console.log(userId, jobId);
     const usersCollectionRef = collection(db, 'users');
     const userQuery = query(usersCollectionRef, where('uid', '==', userId));
-    console.log(userId);
+    //console.log(userId);
     
     // Get the user document
     const userQuerySnapshot = await getDocs(userQuery);
@@ -45,11 +46,15 @@ export const applyForJob = async (userId, jobId) => {
       throw new Error('Job does not exist');
     }
 
+    // Extract the job title from the job document snapshot
+    const jobTitle = jobDocSnapshot.data().jobTitle; // Get job title from the job document
+
     const userApplicationsCollection = collection(userDocRef, 'applications'); // Reference to the applications subcollection
     const currentDate = new Date();
 
     const applicationData = {
       jobId: jobId,
+      jobTitle: jobTitle, // Use the extracted job title
       status: 'Applied',
       uid: userId,
       userId: userId,
@@ -65,10 +70,13 @@ export const applyForJob = async (userId, jobId) => {
 
     // Write to the applications collection inside the user's existing document
     await addDoc(userApplicationsCollection, applicationData);
+    const applicantsList = jobDocSnapshot.data().applicantsList || [];
 
     // After successfully adding the application, increment the applicants count for the job
     await updateDoc(jobDocRef, {
-      applicants: increment(1),
+      //applicants: increment(1),
+      applicants: applicantsList.length + 1,
+      applicantsList: arrayUnion(userId),
     });
 
   } catch (error) {
@@ -77,13 +85,35 @@ export const applyForJob = async (userId, jobId) => {
 };
 
 export const fetchUserApplications = async (userId) => {
-  console.log("uid",userId);
-  const applicationsCollectionRef = collection(db, 'users', userId, 'applications');
-  console.log(userId) // Specify the correct path to the applications collection
-  const querySnapshot = await getDocs(query(applicationsCollectionRef, where('uid', '==', userId)));
-  console.log("qqq",querySnapshot.docs);
-  //const appliedJobIds = querySnapshot.docs.map(doc => doc.data().jobId); // Adjust if necessary based on your document structure
-  return querySnapshot.docs;
+  try {
+    // Get a reference to the 'users' collection
+    const usersCollectionRef = collection(db, 'users');
+    // Query the 'users' collection to find the document with the given userId
+    const userQuery = query(usersCollectionRef, where('uid', '==', userId));
+    const userQuerySnapshot = await getDocs(userQuery);
+
+    if (!userQuerySnapshot.empty) {
+      // Assuming userId is unique and there should be only one result
+      const userDoc = userQuerySnapshot.docs[0];
+      const applicationsCollectionRef = collection(userDoc.ref, 'applications');
+      // Fetch all documents from the applications sub-collection
+      const applicationsQuerySnapshot = await getDocs(applicationsCollectionRef);
+
+      // Map through the query snapshot and extract application data
+      const applications = applicationsQuerySnapshot.docs.map(doc => ({
+        id: doc.id, // Document ID
+        ...doc.data() // Spread the rest of the application data
+      }));
+      return applications; // Return the array of applications
+
+    } else {
+      return []; // Return an empty array if no user is found
+    }
+
+  } catch (error) {
+    console.error("Error fetching user applications:", error);
+    return [];
+  }
 };
 
 export const fetchUserdata = async (user) => {
@@ -112,6 +142,52 @@ export const fetchUserdata = async (user) => {
   }
 };
 
+export const fetchUserData = async (user) => {
+  try {
+    //console.log("the userrr",user);
+    const userId = user; // Fetch current user ID
+    const usersCollectionRef = collection(db, 'users'); // Reference to the 'users' collection
+    
+    // Query the collection to find a document with the matching 'uid' field
+    const q = query(usersCollectionRef, where('uid', '==', userId));
+    
+    const querySnapshot = await getDocs(q); // Fetch matching documents
+
+    if (!querySnapshot.empty) {
+      // Assume there's only one document with that UID
+      const userDoc = querySnapshot.docs[0]; // Get the first matching document
+      const userData = userDoc.data(); // Get the data from the document
+      //console.log('User Data:', userData); // Log the data for debugging
+      return userData || 'no data'; // Return the tags array, or an empty array if none
+    } else {
+      console.error('No user document with matching UID found!');
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching user name:', error);
+    return [];
+  }
+};
+
+export const updateUserData = async (uid, userData, image) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+
+    const dataToUpdate = {
+      name: userData.name,
+      address: userData.address,
+      phoneNumber: userData.phoneNumber,
+      jobType: userData.jobType,
+      ...(image && { profileImage: image }), // Include profile image if it's not null
+    };
+
+    await updateDoc(userRef, dataToUpdate);
+  } catch (error) {
+    console.error('Error updating user data:', error);
+    throw new Error('Failed to update profile');
+  }
+};
+
 export const fetchUserTags = async (user) => {
   try {
     const userId = user.uid; // Fetch current user ID
@@ -137,7 +213,7 @@ export const fetchUserTags = async (user) => {
   }
 };
 
-export const saveTags = async (uid, selectedTags) => {
+export const saveTags = async (uid, selectedTags, setModalVisible) => {
   try {
     // Query to find the user document by UID
     const usersRef = collection(db, 'users');
@@ -153,19 +229,15 @@ export const saveTags = async (uid, selectedTags) => {
     // Assuming there is only one user document per UID
     const userDoc = querySnapshot.docs[0];
 
-    // Get current tags
-    const currentTags = userDoc.data().tags || []; // Default to empty array if tags don't exist
-
-    // Merge new tags with existing tags (avoiding duplicates)
-    const updatedTags = Array.from(new Set([...currentTags, ...selectedTags]));
-
-    // Update the 'tags' field in user's document
-    await updateDoc(doc(usersRef, userDoc.id), { tags: updatedTags }); // Update using userDoc.id
+    // Update the 'tags' field in user's document with the new selected tags
+    await updateDoc(doc(usersRef, userDoc.id), { tags: selectedTags });
     console.log('Tags updated successfully');
+    setModalVisible(false)
   } catch (error) {
     console.error('Error updating tags:', error);
   }
 };
+
 
 export const fetchRecommendations = async (userTags, setRecommendedJobs) => {
   try {
@@ -222,9 +294,18 @@ export const fetchJobData = async () => {
           type: job.jobType,
           salary: job.salary,
           image: user.profileImage ? user.profileImage : require('../images/logo.png'), // Fetch image or fallback
-          posted: job.timestamp ? job.timestamp.toDate().toLocaleString() : 'N/A',
+          posted: job.timestamp ? job.timestamp.toDate().toLocaleString('en-GB', {
+            year: 'numeric',
+            month: 'long', // You can change to 'numeric' for numbers instead of month names
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: false // Use 24-hour format
+          }) : 'N/A',
           contract: job.jobType,
           description: job.description,
+          tags: job.tags,
+          employerId: job.employerId
         };
       })
     );
@@ -240,11 +321,27 @@ export const fetchTags = async () => {
     const tagsCollectionRef = collection(db, 'tags'); // Assuming your collection is named 'tags'
     const snapshot = await getDocs(tagsCollectionRef);
     
-    const tags = snapshot.docs.map(doc => doc.data().tag); // Adjust based on your tag structure
-    //console.log(tags);
-    return tags; // Return the array of tags
+    const tags = snapshot.docs.map(doc => ({
+      ...doc.data() // Spread the rest of the application data
+    })); // Adjust based on your tag structure
+    //console.log(tags[0].tag);
+    return tags[0].tag; // Return the array of tags
   } catch (error) {
     console.error("Error fetching tags: ", error);
     return []; // Return an empty array on error
+  }
+};
+
+export const handleUpdateJobStatus = async (jobId, setJobPosts, toggleModal, jobPosts) => {
+  try {
+    const jobRef = doc(db, 'jobs', jobId);
+    await updateDoc(jobRef, { status: 'Closed' });
+    setJobPosts((prevJobs) => prevJobs.map((job) =>      
+      job.id === jobId ? { ...job, status: 'Closed' } : job
+    ));
+    toggleModal();
+    //console.log(jobPosts);
+  } catch (error) {
+    console.error('Error updating job status:', error);
   }
 };

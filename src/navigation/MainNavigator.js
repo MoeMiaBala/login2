@@ -12,6 +12,8 @@ import JobPostsScreen from '../screens/jobs';
 import EmployerDashboard from '../screens/employerD';
 import JobFormScreen from '../screens/jobform';
 import JobSearchingNav from './JobSearchingNav';
+import EditProfileScreen from '../screens/editProfile';
+import ApplicantProfile from '../screens/applicantProfile';
 
 const Stack = createStackNavigator();
 
@@ -60,6 +62,15 @@ const MainNavigator = () => {
             <Stack.Screen name='applicantJobSearch'
             component={JobSearchingNav}
             options={{headerShown:false}}/>
+
+            <Stack.Screen name='EditProfileScreen'
+            component={EditProfileScreen}
+            options={{headerShown:false}}/>
+
+            <Stack.Screen name='ApplicantProfile'
+            component={ApplicantProfile}
+            options={{headerShown:false}}/>
+
 
         </Stack.Navigator>
     </NavigationContainer>

@@ -13,6 +13,7 @@ import { moderateScale, moderateVerticalScale, scale } from "react-native-size-m
 import CustomTextInput from "../../components/CustomTextInput";
 import CustomSolidBtn from "../../components/CustomSolidBtn";
 import CustomBorderBtn from "../../components/CustomBorderBtn";
+import CustomPasswordInput from "../../components/CustomPasswordInput";
 import { useNavigation } from "@react-navigation/native";
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Picker } from '@react-native-picker/picker'; 
@@ -213,17 +214,17 @@ const handleSignup = async () => {
         />
         {errors.email !== '' && <Text style={styles.errorMsg}>{errors.email}</Text>}
 
-        <CustomTextInput
+        <CustomPasswordInput
           value={form.password}
           onChangeText={txt => handleChange('password', txt)}
-          title={"Password"}
-          placeholder={"••••••"}
+          title={'Password'}
+          placeholder={'********'}
           secureTextEntry={true}
           bad={errors.password !== ''}
-        />
+        />   
         {errors.password !== '' && <Text style={styles.errorMsg}>{errors.password}</Text>}
 
-        <CustomTextInput
+        <CustomPasswordInput
           value={form.confirmPassword}
           onChangeText={txt => handleChange('confirmPassword', txt)}
           title={"Confirm Password"}
@@ -277,21 +278,7 @@ const handleSignup = async () => {
           />
 
         <View style={styles.socialButtonsContainer}>
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={() => console.log("Google sign-in")}
-          >
-            <Icon name="google" size={scale(24)} color="#DD4B39" />
-            <Text style={styles.socialButtonText}>Sign up with Google</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={() => console.log("Facebook sign-in")}
-          >
-            <Icon name="facebook" size={scale(24)} color="#3b5998" />
-            <Text style={styles.socialButtonText}>Sign up with Facebook</Text>
-          </TouchableOpacity>
+          
         </View>
         </View>
       </ScrollView>

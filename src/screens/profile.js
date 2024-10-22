@@ -11,6 +11,8 @@ const ProfileScreen = ({ navigation, route }) => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [jobApplications, setJobApplications] = useState([]);
+  const [image, setImage] = useState(null);
+
   const user = auth.currentUser;
 
   const userInfo = {
@@ -23,11 +25,11 @@ const ProfileScreen = ({ navigation, route }) => {
     const fetchData = async () => {
       const userD = await fetchUserdata(user);
       setUserData(userD);
+      setImage(userD.image);
       const fetchedTags = await fetchTags(); // Fetch tags from DB
       //console.log(fetchedTags[0])
-      const tagsArray = fetchedTags[0].split(',').map(tag => tag.trim()); // Assuming the tags are stored as a comma-separated string
+      const tagsArray = fetchedTags.split(',').map(tag => tag.trim()); // Assuming the tags are stored as a comma-separated string
       setTags(tagsArray);
-      //console.log("tags array", tagsArray);
       const useTag = await fetchUserTags(user);
       setSelectedTags(useTag);
 
@@ -37,8 +39,6 @@ const ProfileScreen = ({ navigation, route }) => {
   
     fetchData();
   }, []);
-
-  //const tags = ['hello','there'];
 
   const toggleTag = (tag) => {
     setSelectedTags((prevTags) =>
@@ -82,7 +82,7 @@ const ProfileScreen = ({ navigation, route }) => {
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Select Tags</Text>
             <FlatList
-              data={uniqueTags}
+              data={tags}
               renderItem={({ item }) => (
                 <TouchableOpacity onPress={() => toggleTag(item)} style={styles.tagItem}>
                   <Text style={styles.modalTagText}>{item}</Text>
@@ -91,14 +91,14 @@ const ProfileScreen = ({ navigation, route }) => {
                   )}
                 </TouchableOpacity>
               )}
-              keyExtractor={(item, index) => item + index} // Ensure a unique key
+              keyExtractor={(item) => item.id} // Ensure a unique key
             />
             
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => saveTags(uid, selectedTags)} style={styles.saveButton}>
+              <TouchableOpacity onPress={() => saveTags(uid, selectedTags, setModalVisible)} style={styles.saveButton}>
                 <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -109,16 +109,23 @@ const ProfileScreen = ({ navigation, route }) => {
   };
 
   const renderJobApplications = () => {
-    return jobApplications.length > 0 ? (
+    // Use a Set to filter out unique job applications based on their ID
+    const uniqueApplications = Array.from(new Set(jobApplications.map(app => app.id)))
+      .map(id => jobApplications.find(app => app.id === id)); // Get unique application objects
+    
+    return uniqueApplications.length > 0 ? (
       <FlatList
-        data={jobApplications}
-        renderItem={({ item }) => (
-          <View style={styles.jobApplicationContainer}>
-            <Text style={styles.jobTitle}>{item.jobTitle}</Text>
-            <Text style={styles.jobStatus}>{item.status}</Text>
-          </View>
-        )}
-        keyExtractor={(item) => item.jobId} // Use a unique identifier for each job
+        data={uniqueApplications}
+        renderItem={({ item }) => {
+          const jobStyle = getJobStatusStyle(item.status); // Get style based on status
+          return (
+            <View style={[styles.jobApplicationContainer, { backgroundColor: jobStyle.backgroundColor }]}>
+              <Text style={[styles.jobTitle, { color: jobStyle.color }]}>{item.jobTitle}</Text>
+              <Text style={[styles.jobStatus, { color: jobStyle.color }]}>{item.status}</Text>
+            </View>
+          );
+        }}
+        keyExtractor={(item) => `${item.id}-${item.status}`} // Ensure a unique key
       />
     ) : (
       <Text style={styles.noApplicationsText}>No applications found.</Text>
@@ -171,14 +178,15 @@ const ProfileScreen = ({ navigation, route }) => {
 
       {/* Top Icons */}
       <View style={styles.topIcons}>
-        <TouchableOpacity>
-          <Ionicons name="settings-outline" size={24} color="black" onPress={() => {navigation.navigate('Settings')}}/>
-        </TouchableOpacity>
+        
       </View>
 
       {/* Profile Section */}
       <View style={styles.profileSection}>
-        <Image source={{ uri: userInfo.profileImage }} style={styles.profileImage} />
+         <Image 
+          style={styles.profileImage}
+          source={image ? { uri: image } : { uri : 'https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg' }}
+        />
         <View style={styles.userInfo}>
           {userData ? ( // Check if userData is available
           <>
@@ -189,7 +197,7 @@ const ProfileScreen = ({ navigation, route }) => {
             <Text style={styles.loadingText}>Loading user data or no user found</Text> // Display message when userData is not available
           )}
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen')}>
+        <TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen', { uid })}>
           <Ionicons name="create-outline" size={24} color="black" />
         </TouchableOpacity>
       </View>
@@ -205,14 +213,44 @@ const ProfileScreen = ({ navigation, route }) => {
       <View style={styles.jobStatusSection}>
         <Text style={styles.sectionTitle}>Job Application Status:</Text>
         <FlatList
-          data={jobStatus}
+          data={jobApplications}
           renderItem={renderJobStatus}
-          keyExtractor={(item) => item.jobTitle}
+          keyExtractor={(item) => item.id}
         />
       </View>
 
       {renderTagModal()}
       
+      {/* Navigation Area */}
+      <View style={{
+        height: 70,
+        backgroundColor: '#fff',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        borderTopWidth: 1,
+        borderColor: '#ddd',
+        elevation: 0,
+        marginTop: 'auto',
+        
+      }}>
+        <TouchableOpacity onPress={() => navigation.navigate('applicantJobSearch')}>
+          <Ionicons name='home-outline' size={28} color='#999' />
+          <Text style={{ color: '#999' }}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Posts')}>
+          <Ionicons name='briefcase-outline' size={28} color='#999' />
+          <Text style={{ color: '#999' }}>Jobs</Text>
+        </TouchableOpacity>
+        <TouchableOpacity>
+            <Ionicons name="chatbubble-outline" size={28} color="#999" />
+            <Text style={{ color: '#999' }}>Chat</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile', {uid: user.uid})}>
+          <Ionicons name='person-outline' size={28} color='#3F6CDF' />
+          <Text style={{ color: '#3F6CDF' }}>Profile</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -221,9 +259,9 @@ const ProfileScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
     paddingHorizontal: 20,
-    padding: 20
+    padding: 20,
+    backgroundColor: "#fff"
   },
   topIcons: {
     flexDirection: 'row',

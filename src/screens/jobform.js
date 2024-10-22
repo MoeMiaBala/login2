@@ -47,7 +47,7 @@ const JobFormScreen = ({ route, navigation }) => {
     const fetchData = async () => {
       const fetchedTags = await fetchTags(); // Fetch tags from DB
       //console.log(fetchedTags[0])
-      const tagsArray = fetchedTags[0].split(',').map(tag => tag.trim()); // Assuming the tags are stored as a comma-separated string
+      const tagsArray = fetchedTags.split(',').map(tag => tag.trim()); // Assuming the tags are stored as a comma-separated string
       setTags(tagsArray);
       //console.log("tags array", tagsArray);
     };
@@ -106,7 +106,7 @@ const JobFormScreen = ({ route, navigation }) => {
                   )}
                 </TouchableOpacity>
               )}
-              keyExtractor={(item, index) => item + index} // Ensure a unique key for each item
+              keyExtractor={(item) => item.id} // Ensure a unique key for each item
             />
             
             <View style={styles.modalActions}>
@@ -198,7 +198,8 @@ const JobFormScreen = ({ route, navigation }) => {
         employerId: user.uid,
         timestamp: new Date(),
         tags: selectedTags,
-        status: "Active"
+        status: "Active",
+        applicantIds: [],
       };
 
       try {
@@ -303,11 +304,12 @@ const JobFormScreen = ({ route, navigation }) => {
         </View>
         {errors.tags !== '' && <Text style={styles.errorMsg}>{errors.tags}</Text>}
 
-
-        <CustomSolidBtn
-          title={isEdit ? 'Update Job' : 'Post Job'}
-          onClick={handleSubmit}
-        />
+        <View style={styles.buttonContainer}>
+          <CustomSolidBtn
+            title={isEdit ? 'Update Job' : 'Post Job'}
+            onClick={handleSubmit}
+          />
+        </View>
 
         {renderTagModal()}
       </ScrollView>
@@ -415,4 +417,10 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
+  buttonContainer:{
+    marginLeft: 25
+  },
+  sectionTitle: {
+    marginLeft: 40
+  }
 });
