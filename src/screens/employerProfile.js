@@ -4,11 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchUserdata, fetchTags, saveTags, fetchUserTags, fetchUserApplications } from '../utils/dbActions';
 import { auth } from '../../firebaseConfig';
 
-const ProfileScreen = ({ navigation, route }) => {
+const EmployerProfileScreen = ({ navigation, route }) => {
   const { uid } = route.params; // Get the UID passed from Login
   const [userData, setUserData] = useState(null);
-  const [tags, setTags] = useState([]);
-  const [selectedTags, setSelectedTags] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [jobApplications, setJobApplications] = useState([]);
   const [image, setImage] = useState(null);
@@ -26,12 +24,6 @@ const ProfileScreen = ({ navigation, route }) => {
       const userD = await fetchUserdata(user);
       setUserData(userD);
       setImage(userD.image);
-      const fetchedTags = await fetchTags(); // Fetch tags from DB
-      //console.log(fetchedTags[0])
-      const tagsArray = fetchedTags.split(',').map(tag => tag.trim()); // Assuming the tags are stored as a comma-separated string
-      setTags(tagsArray);
-      const useTag = await fetchUserTags(user);
-      setSelectedTags(useTag);
 
       const applications = await fetchUserApplications(uid);
       setJobApplications(applications);
@@ -40,73 +32,6 @@ const ProfileScreen = ({ navigation, route }) => {
     fetchData();
   }, []);
 
-  const toggleTag = (tag) => {
-    setSelectedTags((prevTags) =>
-      prevTags.includes(tag) ? prevTags.filter(t => t !== tag) : [...prevTags, tag]
-    );
-  };
-
-  const renderSelectedTags = () => {
-    const displayedTags = selectedTags.slice(0, 5);
-    return (
-      <View style={styles.selectedTagsContainer}>
-        {displayedTags.map((tag, index) => (
-          <View key={index} style={styles.tagContainer}>
-            <Text style={styles.tagText}>{tag}</Text>
-          </View>
-        ))}
-        {selectedTags.length > 5 && (
-          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.tagContainer}>
-            <Text style={styles.tagText}>...</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Ionicons name="add-circle-outline" size={30} color="black" />
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderTagModal = () => {
-    // Ensure unique tags
-    const uniqueTags = [...new Set(tags)];
-  
-    return (
-      <Modal
-        transparent={true}
-        animationType="slide"
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Select Tags</Text>
-            <FlatList
-              data={tags}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => toggleTag(item)} style={styles.tagItem}>
-                  <Text style={styles.modalTagText}>{item}</Text>
-                  {selectedTags.includes(item) && (
-                    <Ionicons name="checkmark-circle" size={20} color="green" />
-                  )}
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.id} // Ensure a unique key
-            />
-            
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => saveTags(uid, selectedTags, setModalVisible)} style={styles.saveButton}>
-                <Text style={styles.saveButtonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
 
   const renderJobApplications = () => {
     // Use a Set to filter out unique job applications based on their ID
@@ -131,14 +56,6 @@ const ProfileScreen = ({ navigation, route }) => {
       <Text style={styles.noApplicationsText}>No applications found.</Text>
     );
   };
-  
-  
-  const jobStatus = [
-    { jobTitle: 'Frontend Developer', status: 'Applied' },
-    { jobTitle: 'UI Designer', status: 'In Review' },
-    { jobTitle: 'Backend Developer', status: 'Interview Scheduled' },
-    { jobTitle: 'Data Scientist', status: 'Rejected' }
-  ];
 
   // Color coding job status
   const getJobStatusStyle = (status) => {
@@ -151,19 +68,10 @@ const ProfileScreen = ({ navigation, route }) => {
         return { backgroundColor: '#e8f5e9', color: '#388e3c' };
       case 'Rejected':
         return { backgroundColor: '#ffebee', color: '#d32f2f' };
-      case 'Accepted':
-        return { backgroundColor: '#e0f2f1', color: '#004d40' }; // Colors for Accepted status
       default:
         return { backgroundColor: '#f4f4f4', color: 'gray' };
     }
-  };  
-
-  // Render each tag or a prompt to add tags
-  const renderTag = (tag) => (
-    <View style={styles.tagContainer}>
-      <Text style={styles.tagText}>{tag}</Text>
-    </View>
-  );
+  };
 
   const renderJobStatus = ({ item }) => {
     const jobStyle = getJobStatusStyle(item.status);
@@ -207,26 +115,7 @@ const ProfileScreen = ({ navigation, route }) => {
       </View>
       
 
-      {/* Tags Section */}
-      <View style={styles.tagsSection}>
-        <Text style={styles.sectionTitle}>Your Interests:</Text>
-        {renderSelectedTags()}
-      </View>
-
-      {/* Job Status Section */}
-      <Text style={styles.sectionTitle}>Job Application Status:</Text>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.jobStatusSection}>       
-          <FlatList
-            data={jobApplications}
-            renderItem={renderJobStatus}
-            keyExtractor={(item) => item.id}
-            // Add this here to control the scroll indicator
-          />       
-        </View>
-      </ScrollView>     
-
-      {renderTagModal()}
+      
       
       {/* Navigation Area */}
       <View style={{
@@ -241,13 +130,9 @@ const ProfileScreen = ({ navigation, route }) => {
         marginTop: 'auto',
         
       }}>
-        <TouchableOpacity onPress={() => navigation.navigate('applicantJobSearch')}>
+        <TouchableOpacity onPress={() => navigation.navigate('EmployerDashboard', {uid: auth.currentUser.uid})}>
           <Ionicons name='home-outline' size={28} color='#999' />
           <Text style={{ color: '#999' }}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Posts')}>
-          <Ionicons name='briefcase-outline' size={28} color='#999' />
-          <Text style={{ color: '#999' }}>Jobs</Text>
         </TouchableOpacity>
         <TouchableOpacity>
             <Ionicons name="chatbubble-outline" size={28} color="#999" />
@@ -256,6 +141,10 @@ const ProfileScreen = ({ navigation, route }) => {
         <TouchableOpacity onPress={() => navigation.navigate('Profile', {uid: user.uid})}>
           <Ionicons name='person-outline' size={28} color='#3F6CDF' />
           <Text style={{ color: '#3F6CDF' }}>Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Settings', {uid: auth.currentUser.uid})}>
+          <Ionicons name="settings-outline" size={28} color="#999" />
+          <Text style={{ color: '#999' }}>Settings</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -396,4 +285,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProfileScreen;
+export default EmployerProfileScreen;

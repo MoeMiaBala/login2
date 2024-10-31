@@ -252,6 +252,7 @@ const handleSignup = async () => {
           bad={errors.address !== ''}
         />
         {errors.address !== '' && <Text style={styles.errorMsg}>{errors.address}</Text>}
+        
 
         <Text style={styles.inputTitle}>Role</Text>
         <Picker

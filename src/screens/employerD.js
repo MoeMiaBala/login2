@@ -30,7 +30,6 @@ const EmployerDashboard = ({ navigation, route }) => {
   const [applicantsData, setApplicantsData] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -159,14 +158,23 @@ const EmployerDashboard = ({ navigation, route }) => {
           <View style={styles.modalHeaderContainer}>
         
             {/* Touchable Badge with Icon */}
-            <TouchableOpacity style={styles.infoButton} onPress={() => console.log("More Info Pressed")}>
+            <TouchableOpacity style={styles.infoButton} onPress={() => navigation.navigate('JobDetail', { selectedJob })}>
               <Ionicons name="information-circle-outline" size={18} color="#fff" style={styles.infoIcon} />
               <Text style={styles.statusBadge}>Detailed view</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.updateButton} onPress={() => handleUpdateJobStatus(selectedJob.id, setJobPosts, toggleModal, jobPosts)}>
-              <Ionicons name="document-lock-outline" size={18} color="#fff" style={styles.infoIcon} />
-              <Text style={styles.statusBadge}>Close job status</Text>
-            </TouchableOpacity>
+            {selectedJob && (
+              <TouchableOpacity 
+              style={[
+                styles.updateButton, selectedJob.status === 'Active' ? styles.activeJobButton : styles.closedJobButton]} 
+                onPress={() => handleUpdateJobStatus(selectedJob.id, setJobPosts, toggleModal, jobPosts, selectedJob.status, styles.updateButton)}
+              >
+                <Ionicons name="document-lock-outline" size={18} color="#fff" style={styles.infoIcon} />
+                <Text style={styles.statusBadge}>
+                  {selectedJob.status === 'Active' ? 'Close Job Status' : 'Open Job Status'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
             
           </View>
         </View>
@@ -184,10 +192,12 @@ const EmployerDashboard = ({ navigation, route }) => {
         return { backgroundColor: '#e8f5e9', color: '#388e3c' };
       case 'Rejected':
         return { backgroundColor: '#ffebee', color: '#d32f2f' };
+      case 'Accepted':
+        return { backgroundColor: '#e0f2f1', color: '#004d40' }; // Colors for Accepted status
       default:
         return { backgroundColor: '#f4f4f4', color: 'gray' };
     }
-  };
+  };  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -255,11 +265,13 @@ const EmployerDashboard = ({ navigation, route }) => {
       {loading ? (
         <ActivityIndicator size="large" color="#3F6CDF" />
       ) : (
-        <ScrollView contentContainerStyle={styles.jobPostsContainer}>
+        <ScrollView contentContainerStyle={styles.jobPostsContainer} showsHorizontalScrollIndicator={false} // Hide horizontal scroll bar
+        showsVerticalScrollIndicator={false}  >
           <FlatList
             data={filteredJobPosts}
             renderItem={renderJobPost}
             keyExtractor={(item) => item.id}
+              
           />
         </ScrollView>
       )}
@@ -274,7 +286,7 @@ const EmployerDashboard = ({ navigation, route }) => {
             <Ionicons name="chatbubble-outline" size={28} color="#999" />
             <Text style={{ color: '#999' }}>Chat</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Profile', {uid: auth.currentUser.uid})}>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('EmployerP', {uid: auth.currentUser.uid})}>
           <Ionicons name="person-outline" size={28} color="#999" />
           <Text style={{ color: '#999' }}>Profile</Text>
         </TouchableOpacity>
@@ -404,11 +416,11 @@ const styles = StyleSheet.create({
   },
   active: {
     borderColor: '#4CAF50',
-    borderWidth: 2,
+    borderWidth: 1,
   },
   closed: {
     borderColor: '#F44336',
-    borderWidth: 2,
+    borderWidth: 1,
   },
   jobHeader: {
     flexDirection: 'row',
@@ -482,10 +494,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   updateButton: {
-    backgroundColor: '#3F6CDF',
+    //backgroundColor: '#3F6CDF',
     flexDirection: 'row', // Align the icon and text side by side
     alignItems: 'center', // Vertically center align the text and icon
-    backgroundColor: '#d32f2f', // Background color for the button
+    //backgroundColor: 'transparent', // Background color for the button
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 20, // Rounded button
@@ -495,6 +507,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     paddingVertical: 5,
     paddingHorizontal: 10,
+  },
+  activeJobButton: {
+    backgroundColor: '#d32f2f',
+  },
+  closedJobButton: {
+    backgroundColor: '#007aff',
   },
   statusBadge: {
     color: '#fff',

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '../../firebaseConfig'; // Adjust path as needed
-import { fetchUserdata, fetchJobData, handleUpdateJobStatus, fetchUserApplications } from '../utils/dbActions';
+import { fetchUserdata, fetchJobData, handleUpdateJobStatus, fetchUserApplications, updateApplicationStatus } from '../utils/dbActions';
 
 
 const ApplicantProfile = ({ navigation, route }) => {
@@ -12,6 +12,8 @@ const ApplicantProfile = ({ navigation, route }) => {
   const { jobId } = route.params;
   const [ applicantD, setApplactD ] = useState([]);
   const [ job, setJob ] = useState([]);
+  const [status, setStatus] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -25,6 +27,7 @@ const ApplicantProfile = ({ navigation, route }) => {
           const userApplications = await fetchUserApplications(userData.uid);    
           jobApplication = userApplications.find(app => app.jobId === jobId);
           setJob(jobApplication);
+          setStatus(jobApplication.status);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -47,7 +50,7 @@ const ApplicantProfile = ({ navigation, route }) => {
     qualifications: 'B.Sc. in Computer Science',
     resumeLink: 'https://example.com/resume.pdf',
     interviewNotes: 'Strong technical skills, needs to improve communication.',
-    status: job.status,
+    status: status,
   };
 
   const getJobStatusStyle = (status) => {
@@ -60,10 +63,12 @@ const ApplicantProfile = ({ navigation, route }) => {
         return { backgroundColor: '#e8f5e9', color: '#388e3c' };
       case 'Rejected':
         return { backgroundColor: '#ffebee', color: '#d32f2f' };
+      case 'Accepted':
+        return { backgroundColor: '#e0f2f1', color: '#004d40' }; // Colors for Accepted status
       default:
         return { backgroundColor: '#f4f4f4', color: 'gray' };
     }
-  };
+  };  
 
   // Tab content logic
   const renderTabContent = () => {
@@ -93,6 +98,66 @@ const ApplicantProfile = ({ navigation, route }) => {
         );
       default:
         return null;
+    }
+  };
+
+  const JobStatusModal = ({ visible, onClose, onSelect }) => {
+    const getJobStatusStyle = (status) => {
+      switch (status) {
+        case 'Applied':
+          return { backgroundColor: '#e0f7fa', color: '#00796b' };
+        case 'In Review':
+          return { backgroundColor: '#fff8e1', color: '#ffb300' };
+        case 'Interview Scheduled':
+          return { backgroundColor: '#e8f5e9', color: '#388e3c' };
+        case 'Rejected':
+          return { backgroundColor: '#ffebee', color: '#d32f2f' };
+        case 'Accepted':
+          return { backgroundColor: '#e0f2f1', color: '#004d40' }; // Colors for Accepted status
+        default:
+          return { backgroundColor: '#f4f4f4', color: 'gray' };
+      }
+    };  
+  
+    const jobStatuses = ['Applied', 'In Review', 'Interview Scheduled', 'Rejected', 'Accepted'];
+  
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {jobStatuses.map((status) => {
+              const { backgroundColor, color } = getJobStatusStyle(status);
+              return (
+                <TouchableOpacity 
+                  key={status} 
+                  style={[styles.statusOption, { backgroundColor }]}
+                  onPress={() => {
+                    onSelect(status); // Call onSelect with the chosen status
+                    onClose(); // Close the modal after selection
+                  }}
+                >
+                  <Text style={[styles.statusText, { color }]}>{status}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const handleStatusSelect = async (status) => {
+    console.log(`Selected Status: ${status}`);
+    // Add any additional actions, such as updating status
+    const success = await updateApplicationStatus(applicantD.uid, job.id, status);
+    
+    if (success) {
+      setStatus(status); // Update the local status if database update is successful
     }
   };
 
@@ -151,15 +216,25 @@ const ApplicantProfile = ({ navigation, route }) => {
           <Ionicons name="cloud-download" size={24} color="white" />
           <Text style={styles.actionButtonText}>Download Resume</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Schedule', { applicantUid : uid})}>
           <Ionicons name="calendar-outline" size={24} color="white" />
           <Text style={styles.actionButtonText}>Schedule Interview</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => setModalVisible(true)}>
+          <Ionicons name="sync-outline" size={24} color="white" />
+          <Text style={styles.actionButtonText}>Update applicant status</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}>
           <Ionicons name="close-outline" size={24} color="white" />
           <Text style={styles.actionButtonText}>Reject with Feedback</Text>
         </TouchableOpacity>
       </View>
+
+      <JobStatusModal 
+        visible={modalVisible} 
+        onClose={() => setModalVisible(false)}
+        onSelect={handleStatusSelect}
+      />
     </ScrollView>
   );
 };
@@ -267,5 +342,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 10,
   },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  modalContainer: { 
+    width: '80%', 
+    backgroundColor: 'white', 
+    borderRadius: 10, 
+    padding: 20 
+  },
+  statusOption: { 
+    padding: 15, 
+    borderRadius: 5, 
+    marginVertical: 5, 
+    alignItems: 'center' 
+  },
+  statusText: { fontSize: 16, fontWeight: 'bold' },
 
 });

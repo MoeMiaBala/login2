@@ -1,5 +1,5 @@
 import React ,{ useState, useEffect} from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Modal, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Modal, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchUserTags, fetchRecentListings, fetchRecommendations, fetchUserdata, fetchJobData,  fetchUserData, applyForJob, fetchUserApplications } from '../utils/dbActions';
 import { auth } from '../../firebaseConfig';
@@ -10,13 +10,14 @@ const JobSearchingNav = ({ route, navigation }) => {
   const [userTags, setUserTags] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [appliedJobs, setAppliedJobs] = useState([]);
+  const [bookmarkedJobs, setBookmarkedJobs] = useState({});
   const [jobDetails, setJobDetails] = useState(null);
   const [userData, setUserData] = useState(null);
   const [name, setName] = useState('');
   const [image, setImage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [ loading, setLoading ] = useState(true);
   const user = auth.currentUser
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -25,6 +26,8 @@ const JobSearchingNav = ({ route, navigation }) => {
       const username = await fetchUserdata(user);
       setName(username.name);
       setImage(username.image);
+      setLoading(false);    
+
       //console.log(image);
       if (tags.length > 0) {
         await fetchRecommendations(tags, setRecommendedJobs); // Pass userTags and setter
@@ -35,8 +38,6 @@ const JobSearchingNav = ({ route, navigation }) => {
   
     fetchData();
   }, []);
-
-  
 
   const openJobModal = async (job) => {
     try {
@@ -78,7 +79,7 @@ const JobSearchingNav = ({ route, navigation }) => {
 
   const renderJobCard = (job) => (
     <View key={job.id}  style={{
-      backgroundColor: "#fff",
+      backgroundColor: "#e6f2ff",
       padding: 16,
       borderRadius: 15,
       width: 300,
@@ -86,7 +87,9 @@ const JobSearchingNav = ({ route, navigation }) => {
       elevation: 3,
       marginBottom: 16, // Added margin at the bottom
       minHeight: 115, 
+      maxHeight: 165,
       overflow: 'hidden',
+      borderWidth: 0.5, borderColor : '#007aff'
     }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -96,31 +99,19 @@ const JobSearchingNav = ({ route, navigation }) => {
             <Text style={{ fontSize: 12, color: '#999' }}>{job.location}</Text>
           </View>
         </View>
-        <Ionicons name='bookmark-outline' size={24} color='#000' />
+        <TouchableOpacity onPress={() => toggleBookmark(job.id)} style={{ padding: 10}}>
+                  <Ionicons
+                    name={bookmarkedJobs[job.id] ? 'bookmark' : 'bookmark-outline'}
+                    size={24}
+                    color={bookmarkedJobs[job.id] ? '#3F6CDF' : 'black'}
+                  />
+        </TouchableOpacity>
       </View>
   
       <Text style={{ marginTop: 1, fontSize: 18, fontWeight: '600', color: '#171716' }}>{job.jobTitle}</Text>
-      <Text style={{ fontSize: 12, color: '#999' }}>{job.jobType}</Text>
+      <Text style={{ fontSize: 12, color: '#999', marginBottom: 40 }}>{job.jobType}</Text>
   
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 16
-      }}>
-        <TouchableOpacity style={{
-          backgroundColor: '#3F6CDF',
-          padding: 10,
-          borderRadius: 12,
-        }}>
-          <Text style={{ color: '#fff' }}>Apply Now</Text>
-        </TouchableOpacity>
-        <Text style={{
-          fontSize: 16,
-          fontWeight: '600',
-          color: '#171716',
-        }}>{job.salary}</Text>
-      </View>
+      
     </View>
   );
 
@@ -213,11 +204,11 @@ const JobSearchingNav = ({ route, navigation }) => {
 
   const renderJobList = (job) => (
     <TouchableOpacity onPress={() => openJobModal(job)} key={job.id} style={{
-      backgroundColor: '#fff',
+      backgroundColor: '#e6f2ff',
       padding: 16,
       borderRadius: 9,
       marginBottom: 16,
-      elevation: 2,
+      elevation: 2, borderWidth: 0.5, borderColor : '#007aff'
     }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -227,7 +218,13 @@ const JobSearchingNav = ({ route, navigation }) => {
             <Text style={{ fontSize: 12, color: '#999' }}>{job.jobType}</Text>
           </View>
         </View>
-        <Ionicons name='bookmark-outline' size={24} color='#000' />
+        <TouchableOpacity onPress={() => toggleBookmark(job.id)} style={{ padding: 10}}>
+                  <Ionicons
+                    name={bookmarkedJobs[job.id] ? 'bookmark' : 'bookmark-outline'}
+                    size={24}
+                    color={bookmarkedJobs[job.id] ? '#3F6CDF' : 'black'}
+                  />
+        </TouchableOpacity>
       </View>
   
       <View style={{
@@ -242,8 +239,19 @@ const JobSearchingNav = ({ route, navigation }) => {
     </TouchableOpacity>
   );
 
+  const toggleBookmark = (jobId) => {
+    setBookmarkedJobs((prevBookmarks) => ({
+      ...prevBookmarks,
+      [jobId]: !prevBookmarks[jobId],
+    }));
+  };
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#000" style={{ padding: 100}}/>; // Show loading indicator while fetching
+  }
+
   return (
-    <View style={{ flex: 1, marginTop: 35, backgroundColor: '#F5F6FA' }}>
+    <View style={{ flex: 1, marginTop: 6, backgroundColor: '#F5F6FA' }}>
       
       {/* Header Section */}
       <View style={{
@@ -311,7 +319,7 @@ const JobSearchingNav = ({ route, navigation }) => {
           marginVertical: 16,
           fontSize: 24,
           fontWeight: '700',
-          color: '#171716'
+          color: '#3F6CDF'
         }}>Recommended Jobs</Text>
         
         {/* Horizontal Scroll View for Recommendations */}
@@ -324,7 +332,7 @@ const JobSearchingNav = ({ route, navigation }) => {
           marginVertical: 16,
           fontSize: 24,
           fontWeight: '700',
-          color: '#171716'
+          color: '#3F6CDF'
         }}>Recent Listings</Text>
         <ScrollView showsVerticalScrollIndicator={false}>
           {filteredJobs.length > 0 ? filteredJobs.map(renderJobList) : <Text>No Recent Listings</Text>}

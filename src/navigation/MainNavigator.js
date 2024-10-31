@@ -3,6 +3,7 @@ import React from 'react'
 import Splash from '../screens/onboarding/Splash'
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import JobPostingNav from './JobPostingNav';
 import JobSearching from './JobSearchingNav';
 import Profile from '../screens/profile';
@@ -14,14 +15,17 @@ import JobFormScreen from '../screens/jobform';
 import JobSearchingNav from './JobSearchingNav';
 import EditProfileScreen from '../screens/editProfile';
 import ApplicantProfile from '../screens/applicantProfile';
+import ScheduleScreen from '../screens/schedule';
+import JobDetailScreen from '../screens/jobApplicant';
+import EmployerProfileScreen from '../screens/employerProfile';
 
 const Stack = createStackNavigator();
 
 
 const MainNavigator = () => {
   return (
-    
-    <NavigationContainer>
+    <SafeAreaProvider style={{ flex: 1}}>
+      <NavigationContainer>       
         <Stack.Navigator>
             <Stack.Screen name='Splash' 
             component={Splash} 
@@ -71,10 +75,25 @@ const MainNavigator = () => {
             component={ApplicantProfile}
             options={{headerShown:false}}/>
 
+            <Stack.Screen name='Schedule'
+            component={ScheduleScreen}
+            options={{headerShown:false}}/>
+
+            <Stack.Screen name='JobDetail'
+            component={JobDetailScreen}
+            options={{headerShown:false}}/>
+
+            <Stack.Screen name='EmployerP'
+            component={EmployerProfileScreen}
+            options={{headerShown:false}}/>
 
         </Stack.Navigator>
-    </NavigationContainer>
+      </NavigationContainer>
+
+    </SafeAreaProvider>
+      
+       
   )
-}
+};
 
 export default MainNavigator

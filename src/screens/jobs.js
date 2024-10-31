@@ -174,7 +174,7 @@ const JobPostsScreen = ({ navigation }) => {
           <Text style={styles.headerText}>Job Posts</Text>
         </View>
         <View style={styles.searchContainer}>
-          <Ionicons name='search' size={24} color='#171716' />
+          <Ionicons name='search' size={24} color='blue' />
           <TextInput
             placeholder='Search jobs...'
             placeholderTextColor={'#171718'}
@@ -201,7 +201,7 @@ const JobPostsScreen = ({ navigation }) => {
                   <Ionicons
                     name={bookmarkedJobs[item.id] ? 'bookmark' : 'bookmark-outline'}
                     size={24}
-                    color={bookmarkedJobs[item.id] ? 'blue' : 'black'}
+                    color={bookmarkedJobs[item.id] ? '#3F6CDF' : 'black'}
                   />
                 </TouchableOpacity>
               </View>
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   viewButton: {
     padding: 10,
     borderRadius: 8,
-    backgroundColor: '#3F6CDF',
+    backgroundColor: '##3F6CDF',
   },
   applyButton: {
     padding: 10,

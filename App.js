@@ -1,13 +1,13 @@
-import { View, Text } from 'react-native';
+import { View, Text, SafeAreaView } from 'react-native';
 import React from 'react';
 import MainNavigator from './src/navigation/MainNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const App = () => {
   return (
-    <SafeAreaProvider>
+    <SafeAreaView style={{ flex: 1 }}>
       <MainNavigator />
-    </SafeAreaProvider>
+    </SafeAreaView>
     
   )
 }

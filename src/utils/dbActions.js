@@ -1,5 +1,6 @@
 import { db } from "../../firebaseConfig";
 import {collection, addDoc, updateDoc, doc, increment, serverTimestamp, orderBy, limit, where, getDoc, getDocs, query, arrayUnion} from 'firebase/firestore';
+import moment from 'moment';
 
 export const addJob = async (jobData) => {
   try {
@@ -116,6 +117,36 @@ export const fetchUserApplications = async (userId) => {
   }
 };
 
+export const updateApplicationStatus = async (userId, applicationId, newStatus) => {
+  try {
+    // Get a reference to the 'users' collection
+    const usersCollectionRef = collection(db, 'users');
+    // Query the 'users' collection to find the document with the given userId
+    const userQuery = query(usersCollectionRef, where('uid', '==', userId));
+    const userQuerySnapshot = await getDocs(userQuery);
+
+    if (!userQuerySnapshot.empty) {
+      // Get the user document reference
+      const userDoc = userQuerySnapshot.docs[0];
+      // Reference to the specific application document in 'applications' sub-collection
+      const applicationDocRef = doc(userDoc.ref, 'applications', applicationId);
+
+      // Update the 'status' field of the application
+      await updateDoc(applicationDocRef, { status: newStatus });
+
+      console.log('Application status updated successfully');
+      return true;
+    } else {
+      console.log('User not found');
+      return false;
+    }
+
+  } catch (error) {
+    console.error("Error updating application status:", error);
+    return false;
+  }
+};
+
 export const fetchUserdata = async (user) => {
   try {
     const userId = user.uid; // Fetch current user ID
@@ -177,7 +208,6 @@ export const updateUserData = async (uid, userData, image) => {
       name: userData.name,
       address: userData.address,
       phoneNumber: userData.phoneNumber,
-      jobType: userData.jobType,
       ...(image && { profileImage: image }), // Include profile image if it's not null
     };
 
@@ -185,6 +215,79 @@ export const updateUserData = async (uid, userData, image) => {
   } catch (error) {
     console.error('Error updating user data:', error);
     throw new Error('Failed to update profile');
+  }
+};
+
+export const updateUserSchedule = async (uid, scheduleEntry) => {
+  try {
+    // Reference to the "users" collection
+    const usersRef = collection(db, 'users');
+    
+    // Query to find a document where the uid field matches the provided uid
+    const q = query(usersRef, where('uid', '==', uid));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      // If a matching document exists, update its schedule
+      const userDoc = querySnapshot.docs[0]; // Take the first matching document
+      const userRef = doc(db, 'users', userDoc.id);
+      
+      await updateDoc(userRef, {
+        schedule: arrayUnion(scheduleEntry),
+      });
+      
+      console.log('Schedule updated successfully');
+    } else {
+      // If no matching document exists, create a new document with the schedule
+      const newUserRef = doc(usersRef); // Creates a new document with auto-generated ID
+      await setDoc(newUserRef, {
+        uid: uid,
+        schedule: [scheduleEntry],
+      });
+      
+      console.log('User document created with initial schedule.');
+    }
+  } catch (error) {
+    console.error('Error updating schedule:', error);
+    throw new Error('Failed to update schedule');
+  }
+};
+
+export const fetchScheduleEvents = async (uid, selectedDate, setScheduleEvents) => {
+  try {
+    const formattedDate = moment(selectedDate).format('ddd MMM DD YYYY'); // Adjust format to match your data
+    //console.log(selectedDate);
+    //console.log(formattedDate);
+
+    const usersRef = collection(db, 'users'); 
+    const userQuery = query(usersRef, where('uid', '==', uid));
+    const userSnapshot = await getDocs(userQuery);
+
+    if (!userSnapshot.empty) {
+      const userDoc = userSnapshot.docs[0]; 
+      const schedules = userDoc.data().schedule || []; // Retrieve the 'schedule' array
+
+      const filteredSchedules = schedules.filter(schedule => schedule.date === formattedDate); // Filter by date
+      const sortedSchedules = filteredSchedules.sort((a, b) => (a.time > b.time ? 1 : -1)); // Sort by time
+      //console.log(filteredSchedules)
+      const events = await Promise.all(
+        sortedSchedules.map(async (schedule) => {
+          const applicantData = await fetchUserData(schedule.applicantUid);
+          return {
+            id: schedule.id || schedule.applicantUid, // Unique ID (if available)
+            ...schedule,
+            ...applicantData, // Merge applicant data (name and image) into schedule event
+          };
+        })
+      );
+
+      setScheduleEvents(events);
+    } else {
+      console.log("No user document found for the provided uid.");
+      setScheduleEvents([]); // Set empty if no user document found
+    }
+  } catch (error) {
+    console.error('Error fetching schedule events:', error);
   }
 };
 
@@ -237,7 +340,6 @@ export const saveTags = async (uid, selectedTags, setModalVisible) => {
     console.error('Error updating tags:', error);
   }
 };
-
 
 export const fetchRecommendations = async (userTags, setRecommendedJobs) => {
   try {
@@ -332,15 +434,16 @@ export const fetchTags = async () => {
   }
 };
 
-export const handleUpdateJobStatus = async (jobId, setJobPosts, toggleModal, jobPosts) => {
+export const handleUpdateJobStatus = async (jobId, setJobPosts, toggleModal, jobPosts, currentStatus) => {
   try {
+    const newStatus = currentStatus === 'Active' ? 'Closed' : 'Active'; // Toggle status
     const jobRef = doc(db, 'jobs', jobId);
-    await updateDoc(jobRef, { status: 'Closed' });
+    
+    await updateDoc(jobRef, { status: newStatus });
     setJobPosts((prevJobs) => prevJobs.map((job) =>      
-      job.id === jobId ? { ...job, status: 'Closed' } : job
+      job.id === jobId ? { ...job, status: newStatus } : job
     ));
     toggleModal();
-    //console.log(jobPosts);
   } catch (error) {
     console.error('Error updating job status:', error);
   }

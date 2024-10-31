@@ -18,7 +18,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'; // FontAwesome for ico
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { auth } from '../../../firebaseConfig';
-import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail, linkWithPopup, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail, linkWithPopup, GoogleAuthProvider, signInWithCredential, PhoneAuthProvider, multiFactor } from 'firebase/auth';
 import { fetchUserdata } from '../../utils/dbActions';
 
 const Login = () => {
@@ -41,7 +41,7 @@ const Login = () => {
 
         if (response.type === 'success') {
             const { access_token } = response.params; // Extract access_token from params
-
+            let signInResult = [];
             // Check if access_token is available
             if (access_token) {
                 // Fetch user info using access_token
@@ -52,23 +52,24 @@ const Login = () => {
                         }
                         return res.json();
                     })
-                    .then(async (userInfo) => {
-                      const credential = GoogleAuthProvider.credential(null, access_token);
-                      const signInResult = await signInWithCredential(auth, credential);
-                      console.log("the user that is signing in rn:  ", signInResult.user.uid)
-                      // Check if the user already exists in your database
-                      const userData = await fetchUserdata(signInResult.user);
-                      
-                      if (userData) {
+                    .then(async (userInfo) => {                      
+                      const credential = GoogleAuthProvider.credential(null, access_token);             
+                      signInResult = await signInWithCredential(auth, credential);                                           
+                      const userData = await fetchUserdata(signInResult.user);                     
+                      if (userData) {                       
                           navigation.navigate(userData.role === 'Employer' ? 'EmployerDashboard' : 'JobSearching', { uid: signInResult.user.uid });
                       } else {
-                          // User not found, allow them to create an account or link
                           Alert.alert('Account not found', 'You can create a new account or link your Google account.');
                       }
                     })
                     .catch((error) => {
+                        if (error.code === 'auth/multi-factor-auth-required'){
+                          const multiFactorResolver = error;
+                          handleMFA(access_token)
+                        }
                         console.error('Error fetching user info:', error);
-                        Alert.alert('User Info Fetch Error', error.message); // Alert the user about the error
+                        Alert.alert('User Info Fetch Error', error.message);
+                        
                     });
             } else {
                 console.error('Access token not found in response');
@@ -91,6 +92,52 @@ const Login = () => {
         Alert.alert('Linking Error', error.message);
     }
   };
+
+  const handleMFA = async (accessToken) => {
+    try {
+       
+        // Step 2: Use Google API to fetch user info with the access token, not signing in yet
+        const userInfoResponse = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+        
+        if (!userInfoResponse.ok) {
+            throw new Error('Failed to fetch user info');
+        }
+
+        const userInfo = await userInfoResponse.json();
+        console.log('Fetched user info:', userInfo);
+
+        // Step 3: Now check if MFA is required (check for enrolled factors)
+        // This is just a mock check, as actual MFA verification would require Firebase sign-in
+        if (userInfo && userInfo.email_verified) {
+          console.log('MFA required, handling MFA...');
+
+          // Step 4: Prompt for SMS code and handle MFA
+          const mfaSession = await auth.currentUser.multiFactor.getSession(); // Start MFA session
+          console.log(mfaSession)
+          const phoneAuthProvider = new PhoneAuthProvider(auth); // Initialize phone auth
+          const verificationId = await phoneAuthProvider.verifyPhoneNumber(userInfo.phone_number, mfaSession); // Send SMS
+
+          const verificationCode = prompt("Enter the verification code sent to your phone:");
+          if (!verificationCode) {
+              throw new Error("Verification code is required.");
+          }
+
+          const phoneCredential = PhoneAuthProvider.credential(verificationId, verificationCode); // Verify code
+          await auth.currentUser.multiFactor.enroll(phoneCredential); // Enroll user with MFA
+
+          console.log("MFA enrollment successful.");
+        } else {
+            console.log('MMM');
+
+
+            console.log("MFA enrollment successful.");
+        }
+    } catch (error) {
+        console.error("Error during MFA:", error);
+        Alert.alert('MFA Error', error.message);
+    }
+};
+
   
   const handleChange = (field, value) => {
       setForm({ ...form, [field]: value });
@@ -113,7 +160,6 @@ const Login = () => {
       //Alert.alert('Reset Error', error.message);
     }
   };
-
 
   const validate = () => {
       let valid = true;
@@ -143,10 +189,8 @@ const Login = () => {
       signInWithEmailAndPassword(auth, form.email.trim(), form.password)
         .then(async (userCredential) => {
           const { uid } = userCredential.user;
-          console.log("login user       ",uid);
-          
-          const userData = await fetchUserdata(userCredential.user);
-  
+          console.log("login user       ",uid);          
+          const userData = await fetchUserdata(userCredential.user); 
           if (userData && userData.role) {
             // Check the role field and navigate accordingly
             if (userData.role === 'Employer') {

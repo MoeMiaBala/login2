@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { verticalScale, moderateVerticalScale, moderateScale } from 'react-native-size-matters';
+
 import * as ImagePicker from 'expo-image-picker'; // For image upload functionality
 import { Ionicons } from '@expo/vector-icons';
 import CustomTextInput from '../components/CustomTextInput';
+import CustomPasswordInput from '../components/CustomPasswordInput';
+import GooglePlacesInput from '../components/googleSearch';
 import { fetchUserdata, updateUserData } from '../utils/dbActions';
 const EditProfileScreen = ({ navigation, route }) => {
   const { uid } = route.params;
@@ -42,11 +46,9 @@ const EditProfileScreen = ({ navigation, route }) => {
   const handleImagePicker = async () => {
     // Request media library permission
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
 
-    if (!permissionResult.granted) {
-      alert("You've refused to allow this app to access your photos!");
-      return;
-    }
+    
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -54,10 +56,13 @@ const EditProfileScreen = ({ navigation, route }) => {
       aspect: [4, 3],
       quality: 1,
     });
+    
 
-    if (!result.cancelled) {
+    if (!result.canceled) {
       setImage(result.uri);
+      console.log(image);
     }
+    
   };
 
   const handleSave = async () => {
@@ -97,6 +102,7 @@ const EditProfileScreen = ({ navigation, route }) => {
         placeholder={form.address || 'Enter your address'}
         bad={errors.address !== ''}
       />
+      
       <CustomTextInput
         value={form.phoneNumber}
         onChangeText={(txt) => handleChange('phoneNumber', txt)}
@@ -104,13 +110,16 @@ const EditProfileScreen = ({ navigation, route }) => {
         placeholder={form.phoneNumber || 'Enter your phone number'}
         bad={errors.phoneNumber !== ''}
       />
-      <CustomTextInput
+      <CustomPasswordInput
         value={form.password}
-        onChangeText={(txt) => handleChange('password', txt)}
+        onChangeText={txt => handleChange('password', txt)}
         title={'Password'}
-        placeholder={'enter your new password'}
+        placeholder={'Enter new password'}
+        secureTextEntry={true}
         bad={errors.password !== ''}
-      />
+      /> 
+       
+      <GooglePlacesInput/>
 
       {/* Save Button */}
       <TouchableOpacity
@@ -149,7 +158,7 @@ const EditProfileScreen = ({ navigation, route }) => {
           <Ionicons name='person-outline' size={28} color='#3F6CDF' />
           <Text style={{ color: '#3F6CDF' }}>Profile</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile', { uid })}>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings', { uid })}>
           <Ionicons name='settings-outline' size={28} color='#999' />
           <Text style={{ color: '#999' }}>Settings</Text>
         </TouchableOpacity>

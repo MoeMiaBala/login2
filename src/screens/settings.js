@@ -1,233 +1,319 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  Switch,
+  Image,
+  ActivityIndicator
+} from 'react-native';
+import FeatherIcon from 'react-native-vector-icons/Feather';
+import { auth } from '../../firebaseConfig';
+import { fetchUserdata } from '../utils/dbActions';
 
-const SettingsScreen = ({ navigation }) => {
-  const [selectedTheme, setSelectedTheme] = useState('Light');
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
-  const [isNotificationsExpanded, setNotificationsExpanded] = useState(false);
-  const [isPrivacyExpanded, setPrivacyExpanded] = useState(false);
-  const [isAccountExpanded, setAccountExpanded] = useState(false);
-  const [isThemeExpanded, setThemeExpanded] = useState(false);
-  const [isLanguageExpanded, setLanguageExpanded] = useState(false);
+export default function SettingsScreen({ navigation, route }) {
+  const [form, setForm] = useState({
+    darkMode: false,
+    emailNotifications: true,
+    pushNotifications: false,
+  });
+  const [userData, setUserData] = useState(null);
+  const [image, setImage] = useState();
+  const [ loading, setLoading ] = useState(true);
 
-  // Options for themes and languages
-  const themes = ['Light', 'Dark', 'Blue'];
-  const languages = ['English', 'Spanish', 'French'];
+  const user = auth.currentUser;
+  //console.log(user);
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      const userD = await fetchUserdata(user);
+      setUserData(userD);
+      setImage(userD.image);  
+      setLoading(false);    
+    };
+  
+    fetchData();
+  }, []);
 
-  // Render theme and language options
-  const renderOption = (item, type) => (
-    <TouchableOpacity
-      style={styles.optionContainer}
-      onPress={() => {
-        if (type === 'Theme') setSelectedTheme(item);
-        else setSelectedLanguage(item);
-      }}
-    >
-      <Text style={styles.optionText}>{item}</Text>
-      {((type === 'Theme' && selectedTheme === item) || (type === 'Language' && selectedLanguage === item)) && (
-        <Ionicons name="checkmark-circle" size={24} color="green" />
-      )}
-    </TouchableOpacity>
-  );
-
-  // Toggle sections
-  const toggleSection = (section) => {
-    switch (section) {
-      case 'Notifications':
-        setNotificationsExpanded(!isNotificationsExpanded);
-        break;
-      case 'Privacy':
-        setPrivacyExpanded(!isPrivacyExpanded);
-        break;
-      case 'Account':
-        setAccountExpanded(!isAccountExpanded);
-        break;
-      case 'Theme':
-        setThemeExpanded(!isThemeExpanded);
-        break;
-      case 'Language':
-        setLanguageExpanded(!isLanguageExpanded);
-        break;
-      default:
-        break;
-    }
-  };
+  if (loading) {
+    return <ActivityIndicator size="large" color="#000" style={{ padding: 100}}/>; // Show loading indicator while fetching
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.settingsContainer}>
-        <Text style={styles.headerTitle}>Settings</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={styles.profile}>
+        <TouchableOpacity
+          onPress={() => {
+            // handle onPress
+          }}>
+          <View style={styles.profileAvatarWrapper}>
+            <Image
+              alt=""
+              source={image ? { uri: image } : { uri : 'https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg' }}
 
-        {/* Theme Section */}
-        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Theme')}>
-          <Text style={styles.sectionTitle}>Select Theme</Text>
-          <Ionicons name={isThemeExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
-        </TouchableOpacity>
-        {isThemeExpanded && (
-          <FlatList
-            data={themes}
-            renderItem={({ item }) => renderOption(item, 'Theme')}
-            keyExtractor={(item) => item}
-            style={styles.dropdownContainer}
-          />
-        )}
+              style={styles.profileAvatar} />
 
-        {/* Language Section */}
-        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Language')}>
-          <Text style={styles.sectionTitle}>Select Language</Text>
-          <Ionicons name={isLanguageExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
-        </TouchableOpacity>
-        {isLanguageExpanded && (
-          <FlatList
-            data={languages}
-            renderItem={({ item }) => renderOption(item, 'Language')}
-            keyExtractor={(item) => item}
-            style={styles.dropdownContainer}
-          />
-        )}
-
-        {/* Notifications Section */}
-        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Notifications')}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          <Ionicons name={isNotificationsExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
-        </TouchableOpacity>
-        {isNotificationsExpanded && (
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity style={styles.optionContainer}>
-              <Text style={styles.optionText}>Email Notifications</Text>
-              <Ionicons name="mail-outline" size={24} color="black" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionContainer}>
-              <Text style={styles.optionText}>Push Notifications</Text>
-              <Ionicons name="notifications-outline" size={24} color="black" />
+            <TouchableOpacity
+              onPress={() => {
+                // handle onPress
+              }}>
+              <View style={styles.profileAction}>
+                <FeatherIcon color="#fff" name="edit-3" size={15} />
+              </View>
             </TouchableOpacity>
           </View>
-        )}
+        </TouchableOpacity>
 
-        {/* Privacy Section */}
-        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Privacy')}>
-          <Text style={styles.sectionTitle}>Privacy</Text>
-          <Ionicons name={isPrivacyExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
-        </TouchableOpacity>
-        {isPrivacyExpanded && (
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity style={styles.optionContainer}>
-              <Text style={styles.optionText}>Account Privacy</Text>
-              <Ionicons name="lock-closed-outline" size={24} color="black" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionContainer}>
-              <Text style={styles.optionText}>Data Protection</Text>
-              <Ionicons name="shield-checkmark-outline" size={24} color="black" />
-            </TouchableOpacity>
-          </View>
-        )}
+        <View>
+          <Text style={styles.profileName}>{userData.name}</Text>
 
-        {/* Account Section */}
-        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection('Account')}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <Ionicons name={isAccountExpanded ? "chevron-up" : "chevron-down"} size={24} color="black" />
-        </TouchableOpacity>
-        {isAccountExpanded && (
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity style={styles.optionContainer}>
-              <Text style={styles.optionText}>Manage Account</Text>
-              <Ionicons name="person-outline" size={24} color="black" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionContainer}>
-              <Text style={styles.optionText}>Security Settings</Text>
-              <Ionicons name="shield-outline" size={24} color="black" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Navigation Area */}
-      <View style={styles.navigationContainer}>
-        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.navButton}>
-          <Ionicons name='home-outline' size={28} color='#3F6CDF' />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Jobs')} style={styles.navButton}>
-          <Ionicons name='briefcase-outline' size={28} color='#999' />
-          <Text style={styles.navText}>Jobs</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.navButton}>
-          <Ionicons name='person-outline' size={28} color='#999' />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
+          <Text style={styles.profileAddress}>
+            {userData.address}
+          </Text>
+        </View>
       </View>
+
+      <ScrollView>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+
+          <TouchableOpacity
+            onPress={() => {
+              // handle onPress
+            }}
+            style={styles.row}>
+            <View style={[styles.rowIcon, { backgroundColor: '#fe9400' }]}>
+              <FeatherIcon color="#fff" name="globe" size={20} />
+            </View>
+
+            <Text style={styles.rowLabel}>Language</Text>
+
+            <View style={styles.rowSpacer} />
+
+            <FeatherIcon
+              color="#C6C6C6"
+              name="chevron-right"
+              size={20} />
+          </TouchableOpacity>
+
+          <View style={styles.row}>
+            <View style={[styles.rowIcon, { backgroundColor: '#007afe' }]}>
+              <FeatherIcon color="#fff" name="moon" size={20} />
+            </View>
+
+            <Text style={styles.rowLabel}>Dark Mode</Text>
+
+            <View style={styles.rowSpacer} />
+
+            <Switch
+              onValueChange={darkMode => setForm({ ...form, darkMode })}
+              value={form.darkMode} />
+          </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              // handle onPress
+            }}
+            style={styles.row}>
+            <View style={[styles.rowIcon, { backgroundColor: '#32c759' }]}>
+              <FeatherIcon
+                color="#fff"
+                name="navigation"
+                size={20} />
+            </View>
+
+            <Text style={styles.rowLabel}>Location</Text>
+
+            <View style={styles.rowSpacer} />
+
+            <FeatherIcon
+              color="#C6C6C6"
+              name="chevron-right"
+              size={20} />
+          </TouchableOpacity>
+
+          <View style={styles.row}>
+            <View style={[styles.rowIcon, { backgroundColor: '#38C959' }]}>
+              <FeatherIcon color="#fff" name="at-sign" size={20} />
+            </View>
+
+            <Text style={styles.rowLabel}>Email Notifications</Text>
+
+            <View style={styles.rowSpacer} />
+
+            <Switch
+              onValueChange={emailNotifications =>
+                setForm({ ...form, emailNotifications })
+              }
+              value={form.emailNotifications} />
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.rowIcon, { backgroundColor: '#38C959' }]}>
+              <FeatherIcon color="#fff" name="bell" size={20} />
+            </View>
+
+            <Text style={styles.rowLabel}>Push Notifications</Text>
+
+            <View style={styles.rowSpacer} />
+
+            <Switch
+              onValueChange={pushNotifications =>
+                setForm({ ...form, pushNotifications })
+              }
+              value={form.pushNotifications} />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Resources</Text>
+
+          <TouchableOpacity
+            onPress={() => {
+              // handle onPress
+            }}
+            style={styles.row}>
+            <View style={[styles.rowIcon, { backgroundColor: '#8e8d91' }]}>
+              <FeatherIcon color="#fff" name="flag" size={20} />
+            </View>
+
+            <Text style={styles.rowLabel}>Report Bug</Text>
+
+            <View style={styles.rowSpacer} />
+
+            <FeatherIcon
+              color="#C6C6C6"
+              name="chevron-right"
+              size={20} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              // handle onPress
+            }}
+            style={styles.row}>
+            <View style={[styles.rowIcon, { backgroundColor: '#007afe' }]}>
+              <FeatherIcon color="#fff" name="mail" size={20} />
+            </View>
+
+            <Text style={styles.rowLabel}>Contact Us</Text>
+
+            <View style={styles.rowSpacer} />
+
+            <FeatherIcon
+              color="#C6C6C6"
+              name="chevron-right"
+              size={20} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              // handle onPress
+            }}
+            style={styles.row}>
+            <View style={[styles.rowIcon, { backgroundColor: '#32c759' }]}>
+              <FeatherIcon color="#fff" name="star" size={20} />
+            </View>
+
+            <Text style={styles.rowLabel}>Rate in App Store</Text>
+
+            <View style={styles.rowSpacer} />
+
+            <FeatherIcon
+              color="#C6C6C6"
+              name="chevron-right"
+              size={20} />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
-// Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: 20,
+  /** Profile */
+  profile: {
+    padding: 24,
+    backgroundColor: '#fff',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginVertical: 20,
-    color: '#3F6CDF',
+  profileAvatarWrapper: {
+    position: 'relative',
   },
-  settingsContainer: {
-    flexGrow: 1,
-    paddingBottom: 80, // Space for navigation bar
+  profileAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 9999,
+  },
+  profileAction: {
+    position: 'absolute',
+    right: -4,
+    bottom: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 9999,
+    backgroundColor: '#007bff',
+  },
+  profileName: {
+    marginTop: 20,
+    fontSize: 19,
+    fontWeight: '600',
+    color: '#414d63',
+    textAlign: 'center',
+  },
+  profileAddress: {
+    marginTop: 5,
+    fontSize: 16,
+    color: '#989898',
+    textAlign: 'center',
+  },
+  /** Section */
+  section: {
+    paddingHorizontal: 24,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#3F6CDF',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    marginVertical: 5,
-    elevation: 2,
-  },
-  dropdownContainer: {
-    paddingVertical: 10,
-  },
-  optionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderRadius: 10,
-    backgroundColor: '#ffffff',
-    marginVertical: 5,
-    elevation: 1,
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#555',
-  },
-  navigationContainer: {
-    height: 70,
-    backgroundColor: '#f9f9f9',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderColor: '#ddd',
-    elevation: 5,
-  },
-  navButton: {
-    alignItems: 'center',
-  },
-  navText: {
-    color: '#3F6CDF',
+    paddingVertical: 12,
     fontSize: 12,
+    fontWeight: '600',
+    color: '#9e9e9e',
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+  },
+  /** Row */
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    height: 50,
+    backgroundColor: '#f2f2f2',
+    borderRadius: 8,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+  },
+  rowIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 9999,
+    marginRight: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowLabel: {
+    fontSize: 17,
+    fontWeight: '400',
+    color: '#0c0c0c',
+  },
+  rowSpacer: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
   },
 });
-
-export default SettingsScreen;

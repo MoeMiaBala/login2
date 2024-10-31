@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "login",
+    "name": "Hire-Horizon",
     "slug": "hire-horizon",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,20 +18,54 @@
         "CFBundleURLScheme": [
           "com.googleusercontent.apps.508968229017-4h614sqcon9ihe9bk7fibi3ovt42ua30"
         ]
-      }
+      },
+      "unstable_reactLegacyComponentNames": [
+        "AIRMap",
+        "AIRMapCallout",
+        "AIRMapCalloutSubview",
+        "AIRMapCircle",
+        "AIRMapHeatmap",
+        "AIRMapLocalTile",
+        "AIRMapMarker",
+        "AIRMapOverlay",
+        "AIRMapPolygon",
+        "AIRMapPolyline",
+        "AIRMapUrlTile",
+        "AIRMapWMSTile"
+      ]
     },
     "android": {
       "package": "com.webweavers.horizon",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/favicon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "config":{
+        "googleMaps": {
+          "apiKey": "AIzaSyC2tpx0sCLvksLgd_eNmDvmioTMMZyOOho",
+          "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "FOREGROUND_SERVICE"]
+        }
+      },
+      "unstable_reactLegacyComponentNames": [
+        "AIRMap",
+        "AIRMapCallout",
+        "AIRMapCalloutSubview",
+        "AIRMapCircle",
+        "AIRMapHeatmap",
+        "AIRMapLocalTile",
+        "AIRMapMarker",
+        "AIRMapOverlay",
+        "AIRMapPolygon",
+        "AIRMapPolyline",
+        "AIRMapUrlTile",
+        "AIRMapWMSTile"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "config": {
         "firebase": {
-          "apiKey": "",
+          "apiKey": "AIzaSyAJcJuC9J3ntNHUE0HnAGTgUvH6GpsUjEw",
           "authDomain": "hire-horizon-9a704.firebaseapp.com",         
           "projectId": "hire-horizon-9a704",
           "storageBucket": "hire-horizon-9a704.appspot.com",
@@ -42,6 +76,12 @@
       }
     },
     "extra": {
+      "firebaseApiKey": "AIzaSyDReR8oBXsEjPuh2WoPTbz7eRy56x1rIA0",
+      "firebaseAuthDomain": "hire-horizon-9a704.firebaseapp.com",
+      "firebaseProjectId": "hire-horizon-9a704",
+      "firebaseStorageBucket": "hire-horizon-9a704.appspot.com",
+      "firebaseMessagingSenderId": "508968229017",
+      "firebaseAppId": "1:508968229017:android:f5f22425bfc58be1ec0008",
       "ngrokUrl": "https://77c6-105-245-24-11.ngrok-free.app",
       "eas": {
         "projectId": "dcc9695d-c4b9-46f2-a8df-68363ebceb10"
