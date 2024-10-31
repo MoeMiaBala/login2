@@ -27,8 +27,7 @@ const JobDetailScreen = ({ navigation, route }) => {
     //setLoading(true);
     if (selectedJob && selectedJob.applicantlist) {
       fetchApplicantsData(selectedJob.applicantlist, selectedJob.id);
-      //console.log(applicants);
-      setLoading(false);
+      //console.log(applicants);    
     }
   }, [selectedJob]);
   
@@ -63,6 +62,7 @@ const JobDetailScreen = ({ navigation, route }) => {
     }
     setApplicantsData(applicantsList); // Store fetched applicants' data in state
     setApplicants(applicantsList);
+    setLoading(false);
 
   };
 

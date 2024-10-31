@@ -421,12 +421,10 @@ const styles = StyleSheet.create({
   viewButton: {
     padding: 10,
     borderRadius: 8,
-    backgroundColor: '##3F6CDF',
+    backgroundColor: '#3F6CDF',
   },
   applyButton: {
     padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#28a745',
   },
   disabledButton: {
     backgroundColor: '#D3D3D3', // Grey out the button when disabled

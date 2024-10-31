@@ -44,7 +44,7 @@ if (getRNMinorVersion() >= 75) {
   }
 }
 
-rootProject.name = 'login'
+rootProject.name = 'Hire-Horizon'
 
 dependencyResolutionManagement {
   versionCatalogs {

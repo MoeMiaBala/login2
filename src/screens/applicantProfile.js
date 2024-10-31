@@ -216,7 +216,7 @@ const ApplicantProfile = ({ navigation, route }) => {
           <Ionicons name="cloud-download" size={24} color="white" />
           <Text style={styles.actionButtonText}>Download Resume</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Schedule', { applicantUid : uid})}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Schedule', { applicantUid : uid, jobId})}>
           <Ionicons name="calendar-outline" size={24} color="white" />
           <Text style={styles.actionButtonText}>Schedule Interview</Text>
         </TouchableOpacity>

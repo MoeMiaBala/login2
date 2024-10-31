@@ -87,6 +87,7 @@ export default function ScheduleScreen({ navigation, route }) {
   const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
   const [scheduleEvents, setScheduleEvents] = useState([]);
   const { applicantUid } = route.params;
+  const { jobId } = route.params;
 
   const user = auth.currentUser;
 
@@ -101,7 +102,8 @@ export default function ScheduleScreen({ navigation, route }) {
     const scheduleEntry = {
       date: value.toDateString(),              // Define your selected date
       time: time,              // Define your selected time
-      applicantUid: applicantUid       // Define the applicant's UID
+      applicantUid: applicantUid,
+      jobId: jobId
     };
     //console.log(scheduleEntry);
   

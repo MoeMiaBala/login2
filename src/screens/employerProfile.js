@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Modal, ScrollView, } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchUserdata, fetchTags, saveTags, fetchUserTags, fetchUserApplications } from '../utils/dbActions';
+import moment from 'moment';
+import Swiper from 'react-native-swiper';
+import { fetchUserdata, fetchTags, saveTags, fetchUserTags, fetchUserApplications, fetchScheduleEvents, fetchAllSchedules } from '../utils/dbActions';
 import { auth } from '../../firebaseConfig';
 
 const EmployerProfileScreen = ({ navigation, route }) => {
@@ -10,6 +12,9 @@ const EmployerProfileScreen = ({ navigation, route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [jobApplications, setJobApplications] = useState([]);
   const [image, setImage] = useState(null);
+  const [week, setWeek] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [scheduleEvents, setScheduleEvents] = useState([]);
 
   const user = auth.currentUser;
 
@@ -27,11 +32,41 @@ const EmployerProfileScreen = ({ navigation, route }) => {
 
       const applications = await fetchUserApplications(uid);
       setJobApplications(applications);
+      //fetchScheduleEvents(uid, selectedDate, setScheduleEvents);
+      fetchAllSchedules(user.uid, setScheduleEvents, getCurrentWeekDates);
+      
     };
   
     fetchData();
   }, []);
 
+  //console.log(scheduleEvents);
+  const renderSchedule = () => (
+    <FlatList
+      data={scheduleEvents}
+      renderItem={({ item, index }) => (
+        <View style={styles.scheduleItem}>
+          <Image source={item.image || {uri : ''}} style={styles.profileImage2} />
+          <View style={styles.scheduleDetails}>
+            <Text style={styles.scheduleText}>{item.name}</Text>
+            <Text style={styles.jobText}>{item.JobName}</Text>
+            <Text style={styles.timeText}>{item.time}</Text>
+            <Text style={styles.timeText}>{item.date}</Text>
+          </View>
+          <TouchableOpacity onPress={() => {/* Add Contact Navigation */}}>
+            <Ionicons name="call-outline" size={20} color="#3F6CDF" />
+          </TouchableOpacity>
+        </View>
+      )}
+      keyExtractor={(item, index) => index.toString()}
+    />
+  );
+  
+  const getCurrentWeekDates = () => {
+    const startOfWeek = moment().startOf('isoWeek');
+    return Array.from({ length: 7 }, (_, i) => startOfWeek.clone().add(i, 'days').format('ddd MMM DD YYYY'));
+  };
+  
 
   const renderJobApplications = () => {
     // Use a Set to filter out unique job applications based on their ID
@@ -114,8 +149,9 @@ const EmployerProfileScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
       
-
-      
+      {/* Schedule Section */}
+      <Text style={{fontSize: 18}}>My Schedule</Text>
+      {renderSchedule()}
       
       {/* Navigation Area */}
       <View style={{
@@ -283,6 +319,26 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
+  scheduleContainer: { paddingHorizontal: 16, paddingVertical: 20, flex: 1 },
+  scheduleTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+  dayContainer: { alignItems: 'center', margin: 10, backgroundColor: '#000' },
+  dayText: { fontSize: 16, color: '#333' },
+  dateText: { fontSize: 14, color: '#888' },
+  selectedDate: { fontSize: 16, fontWeight: 'bold', marginVertical: 10 },
+  scheduleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: '#e6f2ff',
+    marginBottom: 10,
+    elevation: 1,
+  },
+  profileImage2: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
+  scheduleDetails: { flex: 1, marginLeft: 10 },
+  scheduleText: { fontSize: 16, fontWeight: '600', color: '#333' },
+  jobText: { fontSize: 14, color: '#888' },
+  timeText: { fontSize: 14, color: '#3F6CDF' },
 });
 
 export default EmployerProfileScreen;

@@ -291,6 +291,46 @@ export const fetchScheduleEvents = async (uid, selectedDate, setScheduleEvents) 
   }
 };
 
+export const fetchAllSchedules = async (uid, setScheduleEvents, getCurrentWeekDates) => {
+  try {
+    const usersRef = collection(db, 'users');
+    const userQuery = query(usersRef, where('uid', '==', uid));
+    const userSnapshot = await getDocs(userQuery);
+
+    if (!userSnapshot.empty) {
+      const userDoc = userSnapshot.docs[0];
+      const schedules = userDoc.data().schedule || [];
+
+      const currentWeekDates = getCurrentWeekDates(); // Function to generate all dates for the current week
+      const filteredSchedules = schedules.filter(schedule =>
+        currentWeekDates.includes(schedule.date)
+      );
+
+      const allJobs = await fetchJobData();
+
+      const events = await Promise.all(
+        filteredSchedules.map(async (schedule) => {
+          const applicantData = await fetchUserData(schedule.applicantUid);
+          const jobData = allJobs.find(job => job.id === schedule.jobId);
+          return {
+            id: schedule.id || schedule.applicantUid,
+            ...schedule,
+            ...applicantData,
+            jobName: jobData.jobTitle, // Extract job title
+          };
+        })
+      );
+
+      setScheduleEvents(events);
+    } else {
+      console.log("No user document found for the provided uid.");
+      setScheduleEvents([]);
+    }
+  } catch (error) {
+    console.error('Error fetching schedule events:', error);
+  }
+};
+
 export const fetchUserTags = async (user) => {
   try {
     const userId = user.uid; // Fetch current user ID
