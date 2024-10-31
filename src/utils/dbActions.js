@@ -316,7 +316,8 @@ export const fetchAllSchedules = async (uid, setScheduleEvents, getCurrentWeekDa
             id: schedule.id || schedule.applicantUid,
             ...schedule,
             ...applicantData,
-            jobName: jobData.jobTitle, // Extract job title
+            jobName: jobData.jobTitle, 
+            // Extract job title
           };
         })
       );
